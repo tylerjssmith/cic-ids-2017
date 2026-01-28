@@ -1,0 +1,91 @@
+# --- Metadata ----------------------------------------------------------------
+metadata:
+  name: Denial of Service Attacks
+  description: >
+    This is a configuration file for training a binary classifier to
+    classify network flows as benign or denial of service (DoS) attacks
+    using the CIC-IDS-2017 benchmark dataset. 
+  date_created: 2026-01-27
+
+
+# -- General ------------------------------------------------------------------
+random_state: 76
+
+
+# -- Models -------------------------------------------------------------------
+models:
+  logistic_regression:
+    module: sklearn.linear_model
+    class: LogisticRegression
+    scale_features: true
+    hyperparameters:
+      max_iter: 1000
+      class_weight: balanced
+      random_state: 42
+
+  random_forest:
+    module: sklearn.ensemble
+    class: RandomForestClassifier
+    scale_features: false
+    hyperparameters:
+      n_estimators: 100
+      max_depth: 20
+      class_weight: balanced
+      random_state: 42
+      n_jobs: -1
+  
+  xgboost:
+    module: xgboost
+    class: XGBClassifier
+    scale_features: false
+    hyperparameters:
+      n_estimators: 100
+      max_depth: 6
+      learning_rate: 0.1
+      random_state: 42
+
+
+# -- Pipleine -----------------------------------------------------------------
+pipeline:
+  - step: Load raw data
+    module: src.utilities
+    function: load_data
+    params:
+      filepath: data/raw/Wednesday-workingHours.pcap_ISCX.csv
+      data_type: csv 
+      clean_columns: true
+
+  - step: Clean data
+    module: src.processing
+    function: clean_data
+  
+  - step: Make labels
+    module: src.processing
+    function: prepare_labels_binary
+    params:
+      label_col: label
+      benign_value: BENIGN
+      exclude_values: [Heartbleed]
+      drop_original: true
+    
+  - step: Split data
+    module: src.processing
+    function: split_data
+    params:
+      target_col: is_attack
+      test_size: 0.2
+      stratify_y: True
+      random_state: 76
+
+  - step: Save data splits
+    module: src.utilities
+    function: save_data_splits
+    params:
+      filepath: 'data/processed/data_splits.pkl'
+
+  - step: Train models
+    module: src.training
+    function: train_models
+    params:
+      models_config: models
+      output_dir: models/

@@ -1,39 +1,59 @@
 """
-Train machine learning model for network intrusion detection system
+Run machine learning training pipeline for network intrusion detection.
 """
-import pandas as pd
-from datetime import datetime
-from src.processing import (
-    load_data, 
-    clean_data, 
-    prepare_labels_binary, 
-    split_data
-)
+import argparse
+import importlib
+import yaml
 
 
-def main():
-    print('='*70)
-    print("Network Intrusion Detection System")
-    print("Train Machine Learning Model")
-    print(f"Start: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}")
-    print('='*70)
-    print('\n')
+def load_function(module_path: str, function_name: str):
+    """Dynamically import and return a function."""
+    module = importlib.import_module(module_path)
+    return getattr(module, function_name)
 
-    # Load and prepare data
-    df = load_data('raw','Wednesday-workingHours.pcap_ISCX.csv')
-    df = clean_data(df)
-    df = prepare_labels_binary(df, exclude_values=['Heartbleed'])
-    df_train, df_test = split_data(df)
 
-    # Save data splits
-    df_train.to_parquet('data/intermediate/df_train.parquet')
-    df_test.to_parquet('data/intermediate/df_test.parquet')
+def run_pipeline(config_path: str, verbose: bool = True):
+    """Load and execute the pipeline functions."""
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
+    
+    data = None
+    
+    for step_config in config['pipeline']:
+        func = load_function(
+            step_config['module'],
+            step_config['function']
+        )
+        
+        params = step_config.get('params', {})
+        
+        if step_config['function'] == 'train_models':
+            if 'models_config' in params:
+                models_key = params.pop('models_config')
+                params['models_config'] = config[models_key]
 
-    print('='*70)
-    print(f"End: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}")
-    print('='*70)
-    print('\n')
+        if data is None:
+            data = func(verbose=verbose, **params)
+        else:
+            data = func(data, verbose=verbose, **params)
+    
+    print("Pipeline complete.")
+
+    return data
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+
+    # --config
+    parser.add_argument('--config', required=True, 
+        help="Specify the configuration file")
+
+    # --quiet
+    parser.add_argument('--quiet', action='store_true',
+        help="Run pipeline without verbose output")
+    
+    args = parser.parse_args()
+
+    verbose = not args.quiet
+    final_data = run_pipeline(args.config, verbose=verbose)

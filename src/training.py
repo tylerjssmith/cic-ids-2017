@@ -1,133 +1,129 @@
 """
-Train models for network intrusion detection system.
+Train models in machine learning training pipeline.
 """
+import importlib
+import joblib
+from pathlib import Path
 
-import pandas as pd
 from sklearn.model_selection import cross_validate
 from sklearn.preprocessing import StandardScaler
-from sklearn.base import clone
 
-def train_classifier_cv(
-    X_train: pd.DataFrame, 
-    y_train: pd.Series, 
-    model,
+def train_models(
+    data: dict, 
+    models_config: str, 
     cv: int = 10,
-    scale_features: bool = False,
+    output_dir: str = None,
     verbose: bool = True
-):
+) -> dict:
     """
-    Train any scikit-learn binary classifier with cross-validation 
-    evaluation.
+    Train multiple models.
     
     Parameters
     ----------
-    X_train : pd.DataFrame or np.ndarray
-        Training features
-    y_train : pd.Series or np.ndarray
-        Training labels
-    model : sklearn estimator
-        Any scikit-learn binary classifier (e.g., LogisticRegression, 
-        RandomForestClassifier, XGBClassifier)
+    data : dict
+        Dictionary with X_train, y_train
+    models_config : dict
+        Model configurations
     cv : int, default 10
-        Number of cross-validation folds
-    scale_features : bool, default False
-        Whether to standardize features (recommended for linear models,
-        not necessary for tree-based models)
-    verbose : bool, default True
-        Print results summary
+        Number of folds for cross-validation
+    output_dir : str, default None
+        Directory to save trained models
+    verbose : bool
+        Print training progress
+    """    
+    X_train = data['X_train']
+    y_train = data['y_train']
+    
+    trained_models = {}
+    
+    for model_name, model_config in models_config.items():
+        if verbose:
+            print("="*70)
+            print(f"Train Model: {model_name}")
+            print("-"*70)
         
-    Returns
-    -------
-    dict
-        Dictionary containing:
-        - 'model': Fitted model (trained on full X_train)
-        - 'scaler': Fitted StandardScaler (None if scale_features=False)
-        - 'cv_results': Cross-validation scores
-        - 'cv_mean': Mean scores across folds
-        - 'cv_std': Standard deviation across folds
-    """
-    # Get model name
-    model_name = model.__class__.__name__
-    
-    # Scale features if scale_features=True
-    scaler = None
-    if scale_features:
-        scaler = StandardScaler()
-        X_train_processed = scaler.fit_transform(X_train)
-    else:
-        X_train_processed = X_train
-    
-    # Perform cross-validation
-    if verbose:
-        print("="*70)
-        print(f"Training {model_name} with Cross-Validation")
-        print("="*70)
-        print(f"Training samples: {len(X_train):,}")
-        print(f"Features: {X_train.shape[1]}")
-        print(f"Cross-validation folds: {cv}")
-        print(f"Feature scaling: {'Yes' if scale_features else 'No'}")
-        print(f"Class balance: {dict(pd.Series(y_train).value_counts())}")
-        print(f"\nRunning cross-validation...")
-    
-    scoring = {
-        'precision': 'precision',
-        'recall': 'recall',
-        'f1': 'f1'
-    }
-    
-    cv_results = cross_validate(
-        clone(model),
-        X_train_processed,
-        y_train,
-        cv=cv,
-        scoring=scoring,
-        return_train_score=False,
-        n_jobs=-1
-    )
-    
-    # Calculate means and stds
-    cv_mean = {
-        'precision': cv_results['test_precision'].mean(),
-        'recall': cv_results['test_recall'].mean(),
-        'f1': cv_results['test_f1'].mean()
-    }
-    
-    cv_std = {
-        'precision': cv_results['test_precision'].std(),
-        'recall': cv_results['test_recall'].std(),
-        'f1': cv_results['test_f1'].std()
-    }
-    
-    # Print results
-    if verbose:
-        print("\n" + "="*70)
-        print(f"Cross-Validation Results ({cv}-Fold)")
-        print("="*70)
-        print(f"Precision: {cv_mean['precision']:.4f} (± {cv_std['precision']:.4f})")
-        print(f"Recall:    {cv_mean['recall']:.4f} (± {cv_std['recall']:.4f})")
-        print(f"F1-Score:  {cv_mean['f1']:.4f} (± {cv_std['f1']:.4f})")
+        # Get Configuration
+        module_path = model_config.get('module')
+        module = importlib.import_module(module_path)
+        model_class = getattr(module, model_config['class'])
         
-        print(f"\nPer-Fold Results:")
-        print("-"*70)
-        for fold in range(cv):
-            print(f"Fold {fold+1:2d}: "
-                  f"Precision={cv_results['test_precision'][fold]:.4f}, "
-                  f"Recall={cv_results['test_recall'][fold]:.4f}, "
-                  f"F1={cv_results['test_f1'][fold]:.4f}")
-        print("="*70)
+        hyperparams = model_config.get('hyperparameters', {})
+
+        # Scale Features
+        X_train_processed = X_train.copy()
+        
+        scaler = None
+        if model_config.get('scale_features', False):
+            scaler = StandardScaler()
+            X_train_processed = scaler.fit_transform(X_train)
+
+        if verbose:
+            print("Model:")
+            print(f"- {'Module:':<20} {model_config.get('module')}")
+            print(f"- {'Class:':<20} {model_config.get("class")}")
+            print()
+
+            print("Hyperparameters:")
+            for k, v in hyperparams.items():
+                print(f"- {k:<20} {v}")
+            print()
+            print(f"Scale Features: {model_config.get("scale_features")}")
+            print("-"*70)
+
+        # Cross-validate
+        model = model_class(**hyperparams)
+
+        cv_results = cross_validate(
+            model,
+            X_train_processed,
+            y_train,
+            cv=cv,
+            scoring=['precision', 'recall', 'f1'],
+            n_jobs=-1
+        )
+        
+        cv_mean = {
+            'precision': cv_results['test_precision'].mean(),
+            'recall': cv_results['test_recall'].mean(),
+            'f1': cv_results['test_f1'].mean()
+        }
+        
+        cv_std = {
+            'precision': cv_results['test_precision'].std(),
+            'recall': cv_results['test_recall'].std(),
+            'f1': cv_results['test_f1'].std()
+        }
+        
+        if verbose:
+            print(f"Cross-validation Results ({cv}-Fold):")
+            print(f"Precision: {cv_mean['precision']:.4f} (± {cv_std['precision']:.4f})")
+            print(f"Recall:    {cv_mean['recall']:.4f} (± {cv_std['recall']:.4f})")
+            print(f"F1-Score:  {cv_mean['f1']:.4f} (± {cv_std['f1']:.4f})")
+            print()
+            
+            print(f"Per-Fold Results:")
+            for fold in range(cv):
+                print(f"Fold {fold+1:2d}: "
+                      f"Precision={cv_results['test_precision'][fold]:.4f}, "
+                      f"Recall={cv_results['test_recall'][fold]:.4f}, "
+                      f"F1={cv_results['test_f1'][fold]:.4f}")
+            print()
+
+        # Train Model
+        model.fit(X_train_processed, y_train)
+        
+        # Save Model
+        if output_dir is not None:
+            output_path = Path(output_dir)
+            output_path.mkdir(parents=True, exist_ok=True)
+            model_path = output_path / f"{model_name}.pkl"
+            joblib.dump({'model': model, 'scaler': scaler}, model_path)
+
+        trained_models[model_name] = {
+            'model': model,
+            'scaler': scaler,
+            'cv_mean': cv_mean,
+            'cv_std': cv_std
+        }
     
-    # Train final model on full training set
-    model.fit(X_train_processed, y_train)
-    
-    if verbose:
-        print(f"\nFinal {model_name} trained on full training set.")
-    
-    # Return results
-    return {
-        'model': model,
-        'scaler': scaler,
-        'cv_results': cv_results,
-        'cv_mean': cv_mean,
-        'cv_std': cv_std,
-        'model_name': model_name
-    }
+    return trained_models

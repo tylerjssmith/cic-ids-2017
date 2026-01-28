@@ -1,8 +1,0 @@
-data:
-  dir:
-    raw: "data/raw/"
-    intermediate: "data/intermediate/"
-    processed: "data/processed/"
-  test_size: 0.2
-  random_state: 76
-  stratify: True
