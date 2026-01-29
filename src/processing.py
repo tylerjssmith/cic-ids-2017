@@ -11,6 +11,7 @@ def clean_data(
     df: pd.DataFrame,
     rm_nan: bool = True,
     rm_inf: bool = True, 
+    mk_flt: bool = True,
     verbose: bool = True
 ) -> pd.DataFrame:
     """
@@ -24,6 +25,8 @@ def clean_data(
         Remove rows with NaN values
     rm_inf : bool, default True
         Remove rows with np.inf or -np.inf values
+    mk_flt : bool, default True
+        Convert integer columns to float columns
     verbose : bool, default True
         Print information
         
@@ -71,6 +74,14 @@ def clean_data(
                 f"Removed {inf_rm:,} rows with np.inf values ({inf_rm_p:.2f}%)"
             )
     
+    # Coerce integer columns to float columns
+    if mk_flt: 
+        int_cols = df.select_dtypes(include=['int', 'int64']).columns
+        df[int_cols] = df[int_cols].astype('float64')
+
+        if verbose and len(int_cols) > 0:
+            print(f"Converted {len(int_cols)} columns from int to float")
+
     # Summary    
     if verbose:
         total_rm = initial_rows - len(df)
