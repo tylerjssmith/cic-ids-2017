@@ -1,10 +1,18 @@
+# project
 jupyter
+mlflow
+pytest
+
+# ml/data science
 numpy
 pandas
 scikit-learn
 xgboost
+
+# data visualization
 matplotlib
 seaborn
+
+# misc
 pyarrow
-pytest
-mlflow
+skops

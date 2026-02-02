@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import pandas as pd
-from src.processing import clean_data, prepare_labels_binary, split_data
+from processing import clean_data, prepare_labels_binary, split_data
 
 
 # Tests for clean_data

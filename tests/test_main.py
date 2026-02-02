@@ -1,5 +1,5 @@
 import pytest
-from src.main import load_function
+from main import load_function
 
 
 def test_load_function():

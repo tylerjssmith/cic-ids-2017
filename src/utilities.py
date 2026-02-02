@@ -50,7 +50,8 @@ def load_data(
         df.columns = df.columns\
             .str.strip()\
             .str.lower()\
-            .str.replace(' ', '_')
+            .str.replace(' ', '_')\
+            .str.replace('/', '_')
     
     if verbose:
         print(f"Loaded:  {filepath}")

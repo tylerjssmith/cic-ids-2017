@@ -233,7 +233,7 @@ def test_train_models_multiple_models(
 
 
 @patch('training.mlflow')
-@patch('training.joblib.dump')
+@patch('training.sio.dump')
 def test_train_models_saves_to_output_dir(
     mock_dump,
     mock_mlflow,
@@ -252,12 +252,11 @@ def test_train_models_saves_to_output_dir(
         verbose=False
     )
     
-    # Check joblib.dump was called
     assert mock_dump.called
     call_args = mock_dump.call_args[0]
     saved_path = call_args[1]
     
-    assert 'logistic_regression.pkl' in str(saved_path)
+    assert 'logistic_regression.skops' in str(saved_path)
 
 
 @patch('training.mlflow')

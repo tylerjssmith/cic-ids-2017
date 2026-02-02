@@ -11,7 +11,7 @@ def clean_data(
     df: pd.DataFrame,
     rm_nan: bool = True,
     rm_inf: bool = True, 
-    mk_flt: bool = True,
+    rm_neg: bool = True,
     verbose: bool = True
 ) -> pd.DataFrame:
     """
@@ -25,8 +25,8 @@ def clean_data(
         Remove rows with NaN values
     rm_inf : bool, default True
         Remove rows with np.inf or -np.inf values
-    mk_flt : bool, default True
-        Convert integer columns to float columns
+    rm_neg : bool, default True
+        Remove rows with values <0
     verbose : bool, default True
         Print information
         
@@ -71,16 +71,21 @@ def clean_data(
         if verbose and inf_rm > 0:
             inf_rm_p = inf_rm/initial_rows*100
             print(
-                f"Removed {inf_rm:,} rows with np.inf values ({inf_rm_p:.2f}%)"
+                f"Removed {inf_rm:,} rows with values <0 ({inf_rm_p:.2f}%)"
             )
-    
-    # Coerce integer columns to float columns
-    if mk_flt: 
-        int_cols = df.select_dtypes(include=['int', 'int64']).columns
-        df[int_cols] = df[int_cols].astype('float64')
 
-        if verbose and len(int_cols) > 0:
-            print(f"Converted {len(int_cols)} columns from int to float")
+    # Remove negative
+    if rm_neg:
+        rows_before_neg = len(df)
+        df = df[(df >= 0).all(axis=1)]
+        rows_after_neg = len(df)
+        neg_rm = rows_before_neg - rows_after_neg
+
+        if verbose and neg_rm > 0:
+            neg_rm_p = neg_rm/initial_rows*100
+            print(
+                f"Removed {neg_rm:,} rows with negative values ({neg_rm_p:.2f}%)"
+            )
 
     # Summary    
     if verbose:
@@ -224,44 +229,53 @@ def split_data(
     
     if verbose:
         # Full
-        full_counts = y.value_counts().sort_index()
-        full_pct = (full_counts / len(y) * 100).round(1)
+        fll_cnts = y.value_counts().sort_index()
+        fll_pcts = (fll_cnts / len(y) * 100).round(1)
         
         # Train
-        train_counts = y_train.value_counts().sort_index()
-        train_pct = (train_counts / len(y_train) * 100).round(1)
+        trn_cnts = y_train.value_counts().sort_index()
+        trn_pcts = (trn_cnts / len(y_train) * 100).round(1)
         
         # Test
-        test_counts = y_test.value_counts().sort_index()
-        test_pct = (test_counts / len(y_test) * 100).round(1)
+        tst_cnts = y_test.value_counts().sort_index()
+        tst_pcts = (tst_cnts / len(y_test) * 100).round(1)
         
-        # Comparison
+       # Comparison
         print(f"Dataset Sizes:")
         print(f"Full:     {len(df):>8,} rows")
-        print(f"Training: {len(X_train):>8,} rows ({len(X_train)/len(df)*100:.1f}%)")
-        print(f"Test:     {len(X_test):>8,} rows ({len(X_test)/len(df)*100:.1f}%)")
+        trn_pcts_size = len(X_train)/len(df)*100
+        print(f"Training: {len(X_train):>8,} rows ({trn_pcts_size:.1f}%)")
+        tst_pcts_size = len(X_test)/len(df)*100
+        print(f"Test:     {len(X_test):>8,} rows ({tst_pcts_size:.1f}%)")
         print()
 
         print(f"Class Balance Comparison:")
         print("-"*70)
-        print(f"{'Class':<10} {'Full Dataset':<20} {'Training Set':<20} {'Test Set':<20}")
+        print(f"{'Class':<10} {'Full Dataset':<20} {'Training Set':<20} "
+              f"{'Test Set':<20}")
         print("-"*70)
         
-        for class_val in full_counts.index:
-            full_str = f"{full_counts[class_val]:>6,} ({full_pct[class_val]:>4.1f}%)"
-            train_str = f"{train_counts[class_val]:>6,} ({train_pct[class_val]:>4.1f}%)"
-            test_str = f"{test_counts[class_val]:>6,} ({test_pct[class_val]:>4.1f}%)"
+        for class_val in fll_cnts.index:
+            fll_str = (f"{fll_cnts[class_val]:>6,} "
+                       f"({fll_pcts[class_val]:>4.1f}%)")
+            trn_str = (f"{trn_cnts[class_val]:>6,} "
+                       f"({trn_pcts[class_val]:>4.1f}%)")
+            tst_str = (f"{tst_cnts[class_val]:>6,} "
+                       f"({tst_pcts[class_val]:>4.1f}%)")
             
             class_name = "Benign" if class_val == 0 else "Attack"
-            print(f"{class_name:<10} {full_str:<20} {train_str:<20} {test_str:<20}")
+            print(f"{class_name:<10} {fll_str:<20} {trn_str:<20} "
+                  f"{tst_str:<20}")
         
         print("-"*70)
         
         # Stratification
         if stratify_y:
-            max_diff = max(abs(train_pct - full_pct).max(), abs(test_pct - full_pct).max())
+            max_diff = max(abs(trn_pcts - fll_pcts).max(),
+                           abs(tst_pcts - fll_pcts).max())
             if max_diff < 0.5:
-                print("Stratification successful (class distribution differences <0.5%)")
+                print("Stratification successful "
+                      "(class distribution differences <0.5%)")
             else:
                 print(f"Class distribution difference: {max_diff:.2f}%")
         else:

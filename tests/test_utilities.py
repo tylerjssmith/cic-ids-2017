@@ -2,7 +2,7 @@ import pytest
 import pandas as pd
 import joblib
 from pathlib import Path
-from src.utilities import load_data, save_data_splits
+from utilities import load_data, save_data_splits
 
 
 def test_load_csv(tmp_path):
@@ -52,7 +52,8 @@ def test_load_data_column_cleaning(tmp_path):
     df_original = pd.DataFrame({
         ' First Name ': ['Alice', 'Bob'],
         'Last Name': ['Smith', 'Jones'],
-        'AGE': [25, 30]
+        'AGE': [25, 30],
+        'bytes/s': [1,2,3]
     })
     
     csv_file = tmp_path / "test_data.csv"
@@ -64,7 +65,7 @@ def test_load_data_column_cleaning(tmp_path):
         verbose=False
     )
     
-    expected_columns = ['first_name', 'last_name', 'age']
+    expected_columns = ['first_name', 'last_name', 'age', 'bytes_s']
     assert list(df_loaded.columns) == expected_columns
 
 
