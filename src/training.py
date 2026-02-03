@@ -2,16 +2,21 @@
 Train models in machine learning training pipeline.
 """
 import importlib
-import skops.io as sio
 from pathlib import Path
 
 import mlflow
 import mlflow.sklearn
 import pandas as pd
-from sklearn.model_selection import cross_validate
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
-
+from sklearn.model_selection import cross_validate
+from sklearn.metrics import (
+    make_scorer, 
+    precision_score, 
+    recall_score, 
+    f1_score
+)
+import skops.io as sio
 
 def train_models(
     data: dict,
@@ -19,6 +24,7 @@ def train_models(
     cv: int = 10,
     cv_n_jobs: int = 1,
     model_dir: str = None,
+    model_file: str = None,
     use_mlflow: bool = False,
     mlflow_name: str = None,
     verbose: bool = True
@@ -53,6 +59,9 @@ def train_models(
     X_train = data['X_train']
     y_train = data['y_train']
     
+    label_encoder = LabelEncoder()
+    y_train_encoded = label_encoder.fit_transform(y_train)
+
     if use_mlflow:
         mlflow.set_experiment(mlflow_name)
     
@@ -118,15 +127,29 @@ def train_models(
             # Cross-validate
             model = model_class(**hyperparams)
 
+            # Determine Scoring
+            if len(label_encoder.classes_) == 2:
+                scoring = ['precision', 'recall', 'f1']
+            else:
+                scoring = {
+                    'precision': make_scorer(precision_score, 
+                        average='weighted', zero_division=0),
+                    'recall': make_scorer(recall_score, 
+                        average='weighted', zero_division=0),
+                    'f1': make_scorer(f1_score, 
+                        average='weighted', zero_division=0)
+                }
+
             cv_results = cross_validate(
                 pipeline,
                 X_train,
-                y_train,
+                y_train_encoded,
                 cv=cv,
-                scoring=['precision', 'recall', 'f1'],
+                scoring=scoring,
                 n_jobs=cv_n_jobs
             )
             
+            # Summarize Scores
             cv_mean = {
                 'precision': cv_results['test_precision'].mean(),
                 'recall': cv_results['test_recall'].mean(),
@@ -175,7 +198,7 @@ def train_models(
                 print()
 
             # Train Model
-            pipeline.fit(X_train, y_train)
+            pipeline.fit(X_train, y_train_encoded)
             
             # MLflow: Save Model
             if use_mlflow:
@@ -188,22 +211,12 @@ def train_models(
                         'xgboost.sklearn.XGBClassifier'
                     ]
                 )
-            
-            # Local: Save Model
-            if model_dir is not None:
-                output_path = Path(model_dir)
-                output_path.mkdir(parents=True, exist_ok=True)
-                model_path = output_path / f"{model_name}.skops"
-                sio.dump(pipeline, model_path)
-                
-                # MLflow: Path to Local Save
-                if use_mlflow:
-                    mlflow.log_param("local_model_path", str(model_path))
 
             trained_models[model_name] = {
                 'pipeline': pipeline,
                 'model': model,
                 'scaler': scaler,
+                'label_encoder': label_encoder,
                 'feature_names': X_train.columns.tolist(),
                 'cv_mean': cv_mean,
                 'cv_std': cv_std,
@@ -211,11 +224,19 @@ def train_models(
                     mlflow.active_run().info.run_id if use_mlflow else None
                 )
             }
-        
+
         finally:
             if use_mlflow:
                 mlflow.end_run()
     
+    # Local: Save Model
+    if model_dir is not None:
+        model_file = model_file if model_file else 'model_file'
+        output_path = Path(model_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+        model_path = output_path / f"{model_file}.skops"
+        sio.dump(trained_models, model_path)
+
     return trained_models
 
 

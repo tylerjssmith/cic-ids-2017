@@ -53,7 +53,7 @@ def test_load_data_column_cleaning(tmp_path):
         ' First Name ': ['Alice', 'Bob'],
         'Last Name': ['Smith', 'Jones'],
         'AGE': [25, 30],
-        'bytes/s': [1,2,3]
+        'bytes/s': [1,2]
     })
     
     csv_file = tmp_path / "test_data.csv"

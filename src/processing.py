@@ -1,10 +1,178 @@
 """
 Process data in machine learning training pipeline.
 """
+import re
 from typing import List, Optional
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
+
+
+def prepare_labels(
+    df: pd.DataFrame, 
+    label_col: str = 'label',
+    exclude_values: list = None,
+    replace_values: dict = None, 
+    clean_values: bool = True,
+    verbose: bool = True
+) -> pd.DataFrame:
+    """
+    Prepare labels.
+    
+    Parameters:
+    -----------
+    df : pandas.DataFrame
+        Input DataFrame with original labels
+    label_col : str
+        Name of label column to process
+    exclude_values : list, optional
+        List of label values to exclude (rows will be dropped)
+    replace_values : dict, optional
+        Dictionary mapping new values (keys) to old values to replace
+        Values can be strings or lists of strings
+    clean_values : bool, default True
+        lowercase, strip whitespace, replace inner whitespace and 
+        non-alphanumeric chars with underscores
+    verbose : bool, default True
+        Print information
+    
+    Returns:
+    --------
+    pandas.DataFrame
+        DataFrame with processed labels
+    """
+    if verbose:
+        print("="*70)
+        print("Prepare Labels")
+        print("-"*70)
+
+    df = df.copy()
+    df.rename(columns={label_col: 'original'}, inplace=True)
+    df['label'] = df['original']
+
+    if verbose:
+        initial_rows = len(df)
+        print(f"Initial Rows: {initial_rows:,}")
+        print()
+        print("Initial Distribution:")
+        print(df['label'].value_counts().sort_index().to_string())
+        print()
+    
+    if exclude_values is not None and len(exclude_values) > 0:
+        rows_rm = df['label'].isin(exclude_values).sum()
+        df = df[~df['label'].isin(exclude_values)]
+
+        if verbose:
+            print(f"Removed {rows_rm:,} rows with labels:")
+            for v in exclude_values:
+                print(f"- {v}")
+            print()
+    
+    if replace_values is not None and len(replace_values) > 0:
+        reverse_map = {}
+        for new_value, old_values in replace_values.items():
+            if isinstance(old_values, list):
+                for old_value in old_values:
+                    reverse_map[old_value] = new_value
+            else:
+                reverse_map[old_values] = new_value
+        
+        df['label'] = df['label'].replace(reverse_map)
+        
+        if verbose:
+            print("Mapped old to new values:")
+            for new_val, old_vals in replace_values.items():
+                for old_val in list(old_vals):
+                    print(f"- {old_val:<19} -> {new_val:<}")
+            print()
+    
+    if clean_values:
+        def clean_label(label):
+            cleaned = str(label).lower().strip()
+            cleaned = re.sub(r'[^a-z0-9]+', '_', cleaned)
+            return cleaned.strip('_')
+        
+        df['label'] = df['label'].apply(clean_label)
+    
+    if verbose:
+        final_rows = len(df)
+        rows_removed = initial_rows - final_rows
+        perc_removed = rows_removed / initial_rows * 100
+
+        print('-'*70)
+        print(f"Final Rows: {final_rows:,}")
+        print(f"Total Removed: {rows_removed:,} ({perc_removed:.4f}%)")
+        print()
+        print("Final Distribution:")
+        print(df.groupby('original')['label'].value_counts().map('{:,}'.format).to_string())
+        print()
+    
+    df.drop(columns=['original'], inplace=True)
+    
+    return df
+
+
+def drop_features(
+    df: pd.DataFrame, 
+    drop: list = [], 
+    rm_zv: bool = True,
+    verbose: bool = True
+) -> pd.DataFrame:
+    """
+    Drop features
+    
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input DataFrame
+    drop : list
+        Drop columns
+    rm_zv : bool, default True
+        Drop zero-variance columns
+    verbose : bool, default True
+        Print information
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with features dropped
+    """
+    if verbose:
+        print('='*70)
+        print('Drop Features')
+        print('-'*70)
+        print(f'Initial Columns: {len(df.columns)}')
+        print()
+
+    df = df.copy()
+
+    if len(drop) > 0:
+        df = df.drop(columns=list(drop))
+
+        if verbose:
+            print('Dropped named columns if they exist:')
+            for v in drop:
+                print(f'- {v}')
+            print()
+
+    if rm_zv:
+        numeric_cols = df.select_dtypes(include=[np.number]).columns
+        zv = df[numeric_cols].var()[df[numeric_cols].var() == 0].index.tolist()
+        df = df.drop(columns=list(zv))
+
+        if verbose and len(zv) > 0:
+            print('Dropped zero-variance columns:')
+            for v in zv:
+                print(f'- {v}')
+            print()
+
+    if verbose:
+        print('-'*70)
+        print(f"Final Columns: {len(df.columns)}")
+        print(f"Dropped {len(drop)} columns")
+        print()
+
+    return df
 
 
 def clean_data(
@@ -77,7 +245,8 @@ def clean_data(
     # Remove negative
     if rm_neg:
         rows_before_neg = len(df)
-        df = df[(df >= 0).all(axis=1)]
+        numeric_cols = df.select_dtypes(include=[np.number]).columns
+        df = df[(df[numeric_cols] >= 0).all(axis=1)]
         rows_after_neg = len(df)
         neg_rm = rows_before_neg - rows_after_neg
 
@@ -99,82 +268,9 @@ def clean_data(
     return df
 
 
-def prepare_labels_binary(
-    df: pd.DataFrame,
-    label_col: str = 'label',
-    benign_value: str = 'BENIGN',
-    exclude_values: Optional[List[str]] = None,
-    drop_original: bool = True,
-    verbose: bool = True
-) -> pd.DataFrame:
-    """
-    Create binary attack labels from multi-class labels.
-    
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Input DataFrame with original labels
-    label_col : str, default 'Label'
-        Name of column containing original labels
-    benign_value : str, default 'BENIGN'
-        Label value indicating benign/normal traffic
-    exclude_values : list of str, optional
-        Label values to exclude from dataset
-    drop_original : bool, default True
-        Whether to drop the original label column
-    verbose : bool, default True
-        Print information
-        
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame with 'is_attack' binary label column
-    """
-    if verbose:
-        print("="*70)
-        print("Prepare Labels")
-        print("-"*70)
-    
-    if label_col not in df.columns:
-        raise ValueError(f"Column '{label_col}' not found in DataFrame")
-    
-    df = df.copy()
-
-    # Exclude Values
-    if exclude_values is not None:
-        initial_rows = len(df)
-        df = df[~df[label_col].isin(exclude_values)]
-        rows_rm = initial_rows - len(df)
-        
-        if verbose:
-            rows_rm_p = rows_rm/initial_rows*100
-            print(f"Values Removed:")
-            print(f"Removed {rows_rm:,} ({rows_rm_p:.2f}%) rows with labels:")
-            print(f"{exclude_values}")
-            print()
-    
-    # Create Labels
-    df['is_attack'] = (df[label_col] != benign_value).astype(int)
-    
-    if verbose:
-        print(f"Labels Created:")
-        print(df['is_attack'].value_counts().to_dict())
-        print()
-
-        print(f"Original Labels by Created Labels:")
-        print(df.groupby('is_attack')[label_col].value_counts())
-        print()
-    
-    # Drop Original Labels
-    if drop_original:
-        df = df.drop(label_col, axis=1)
-    
-    return df
-
-
 def split_data(
     df: pd.DataFrame, 
-    target_col: str = 'is_attack', 
+    target_col: str = 'label', 
     test_size: float = 0.2,
     stratify_y: bool = True,
     random_state: int = 76,
@@ -187,8 +283,8 @@ def split_data(
     ----------
     df : pd.DataFrame
         Input DataFrame
-    target_col : str, default 'is_attack'
-        Name of target column for stratification
+    target_col : str, default 'label'
+        Name of label column
     test_size : float, default 0.2
         Proportion of dataset to include in test split
     stratify_y : bool, default True
@@ -196,7 +292,7 @@ def split_data(
     random_state : int, default 76
         Random state for train_test_split()
     verbose : bool, default True
-        Print information including class balance comparison
+        Print information
         
     Returns
     -------
@@ -215,7 +311,6 @@ def split_data(
     if target_col not in df.columns:
         raise ValueError(f"Column '{target_col}' not found in DataFrame")
     
-    # Split Data
     X = df.drop(columns=[target_col])
     y = df[target_col]
     
@@ -228,19 +323,17 @@ def split_data(
     )
     
     if verbose:
-        # Full
+        # Summary
         fll_cnts = y.value_counts().sort_index()
         fll_pcts = (fll_cnts / len(y) * 100).round(1)
         
-        # Train
         trn_cnts = y_train.value_counts().sort_index()
         trn_pcts = (trn_cnts / len(y_train) * 100).round(1)
         
-        # Test
         tst_cnts = y_test.value_counts().sort_index()
         tst_pcts = (tst_cnts / len(y_test) * 100).round(1)
         
-       # Comparison
+        # Comparison
         print(f"Dataset Sizes:")
         print(f"Full:     {len(df):>8,} rows")
         trn_pcts_size = len(X_train)/len(df)*100
@@ -249,10 +342,13 @@ def split_data(
         print(f"Test:     {len(X_test):>8,} rows ({tst_pcts_size:.1f}%)")
         print()
 
+        max_class_len = max(len(str(class_val)) for class_val in fll_cnts.index)
+        class_col_width = max(max_class_len, 5)
+        
         print(f"Class Balance Comparison:")
         print("-"*70)
-        print(f"{'Class':<10} {'Full Dataset':<20} {'Training Set':<20} "
-              f"{'Test Set':<20}")
+        print(f"{'Class':<{class_col_width}} {'Full Dataset':>18} "
+              f"{'Training Set':>16} {'Test Set':>16}")
         print("-"*70)
         
         for class_val in fll_cnts.index:
@@ -263,9 +359,8 @@ def split_data(
             tst_str = (f"{tst_cnts[class_val]:>6,} "
                        f"({tst_pcts[class_val]:>4.1f}%)")
             
-            class_name = "Benign" if class_val == 0 else "Attack"
-            print(f"{class_name:<10} {fll_str:<20} {trn_str:<20} "
-                  f"{tst_str:<20}")
+            print(f"{str(class_val):<{class_col_width}} {fll_str:>18} "
+                  f"{trn_str:>16} {tst_str:>16}")
         
         print("-"*70)
         
@@ -283,7 +378,6 @@ def split_data(
         
         print()
     
-    # Return as dictionary
     return {
         'X_train': X_train,
         'X_test': X_test,

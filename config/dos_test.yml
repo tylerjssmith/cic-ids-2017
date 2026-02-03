@@ -1,0 +1,18 @@
+# --- Metadata ----------------------------------------------------------------
+metadata:
+  name: Testing for Denial of Service Attacks
+  description: >
+    This is a configuration file for testing a binary classifier to
+    classify network flows as benign or denial of service (DoS) attacks
+    using the CIC-IDS-2017 benchmark dataset. 
+  date_created: 2026-02-03
+
+
+# -- Pipleine -----------------------------------------------------------------
+pipeline:  
+  - step: Test models
+    module: testing
+    function: evaluate_models
+    params:
+      models_file: models/model_file.skops
+      data_file: data/processed/data_splits.pkl

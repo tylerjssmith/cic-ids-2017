@@ -15,8 +15,8 @@ def test_clean_data_removes_nan():
     result = clean_data(
         df, 
         rm_nan=True, 
-        rm_inf=False, 
-        mk_flt=False, 
+        rm_inf=False,
+        rm_neg=False, 
         verbose=False
     )
     
@@ -34,8 +34,8 @@ def test_clean_data_removes_inf():
     result = clean_data(
         df, 
         rm_nan=False, 
-        rm_inf=True, 
-        mk_flt=False, 
+        rm_inf=True,
+        rm_neg=False, 
         verbose=False
     )
     
@@ -44,23 +44,24 @@ def test_clean_data_removes_inf():
     assert not np.isinf(result['b']).any()
 
 
-def test_clean_data_converts_int_to_float():
-    """Test that integer columns are converted to float when mk_flt=True."""
+def test_clean_data_removes_neg():
+    """Test that negative values are removed when rm_neg=True."""
     df = pd.DataFrame({
-        'int_col': [1, 2, 3],
-        'float_col': [1.0, 2.0, 3.0]
+        'a': [1, -2, 3, 4],
+        'b': [5, 6, -7, 8]
     })
     
     result = clean_data(
         df, 
         rm_nan=False, 
         rm_inf=False, 
-        mk_flt=True, 
+        rm_neg=True,
         verbose=False
     )
     
-    assert result['int_col'].dtype == 'float64'
-    assert result['float_col'].dtype == 'float64'
+    assert len(result) == 2
+    assert not (result['a'] < 0).any()
+    assert not (result['b'] < 0).any()
 
 
 def test_clean_data_preserves_original():
@@ -88,7 +89,7 @@ def test_clean_data_with_all_flags_disabled():
         df, 
         rm_nan=False, 
         rm_inf=False, 
-        mk_flt=False, 
+        rm_neg=False, 
         verbose=False
     )
     

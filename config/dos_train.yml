@@ -1,6 +1,6 @@
 # --- Metadata ----------------------------------------------------------------
 metadata:
-  name: Denial of Service Attacks
+  name: Training for Denial of Service Attacks
   description: >
     This is a configuration file for training a binary classifier to
     classify network flows as benign or denial of service (DoS) attacks
@@ -21,7 +21,7 @@ models:
     hyperparameters:
       max_iter: 1000
       class_weight: balanced
-      random_state: 42
+      random_state: 76
 
   random_forest:
     module: sklearn.ensemble
@@ -31,7 +31,7 @@ models:
       n_estimators: 100
       max_depth: 20
       class_weight: balanced
-      random_state: 42
+      random_state: 76
       n_jobs: 1
   
   xgboost:
@@ -42,7 +42,7 @@ models:
       n_estimators: 100
       max_depth: 6
       learning_rate: 0.1
-      random_state: 42
+      random_state: 76
 
 
 # -- Pipleine -----------------------------------------------------------------
@@ -54,27 +54,49 @@ pipeline:
       filepath: data/raw/Wednesday-workingHours.pcap_ISCX.csv
       data_type: csv 
       clean_columns: true
+  
+  - step: Prepare labels
+    module: processing
+    function: prepare_labels
+    params:
+      exclude_values: [Heartbleed]
+      replace_values:
+        0:
+          - BENIGN
+        1:
+          - DoS Hulk
+          - DoS GoldenEye
+          - DoS slowloris
+          - DoS Slowhttptest
+
+  - step: Drop features
+    module: processing
+    function: drop_features
+    params:
+      drop: 
+        - destination_port
+        - fwd_header_length.1
+        - average_packet_size
+        - avg_fwd_segment_size
+        - avg_bwd_segment_size
+        - subflow_fwd_packets
+        - subflow_fwd_bytes
+        - subflow_bwd_packets
+        - subflow_bwd_bytes
+        - init_win_bytes_forward
+        - init_win_bytes_backward
+        - act_data_pkt_fwd
+        - min_seg_size_forward
+        - down_up_ratio
 
   - step: Clean data
     module: processing
     function: clean_data
-  
-  - step: Make labels
-    module: processing
-    function: prepare_labels_binary
-    params:
-      label_col: label
-      benign_value: BENIGN
-      exclude_values: [Heartbleed]
-      drop_original: true
-    
+
   - step: Split data
     module: processing
     function: split_data
     params:
-      target_col: is_attack
-      test_size: 0.2
-      stratify_y: True
       random_state: 76
 
   - step: Save data splits
@@ -88,5 +110,5 @@ pipeline:
     function: train_models
     params:
       models_config: models
-      output_dir: models/
+      model_dir: models/
       cv_n_jobs: 4

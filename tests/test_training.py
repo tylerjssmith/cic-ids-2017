@@ -234,21 +234,21 @@ def test_train_models_multiple_models(
 
 @patch('training.mlflow')
 @patch('training.sio.dump')
-def test_train_models_saves_to_output_dir(
+def test_train_models_saves_to_model_dir(
     mock_dump,
     mock_mlflow,
     sample_data,
     simple_models_config,
     tmp_path
 ):
-    """Test that models are saved when output_dir is provided."""
-    output_dir = tmp_path / "models"
+    """Test that models are saved when model_dir is provided."""
+    model_dir = tmp_path / "models"
     
     train_models(
         data=sample_data,
         models_config=simple_models_config,
         cv=3,
-        output_dir=str(output_dir),
+        model_dir=str(model_dir),
         verbose=False
     )
     

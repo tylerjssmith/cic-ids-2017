@@ -4,9 +4,9 @@ set -e
 
 show_help() {
     cat << EOF
-Usage: ./train_models.sh [OPTIONS] [CONFIG_FILE]
+Usage: ./test_models.sh [OPTIONS] [CONFIG_FILE]
 
-Run the training pipeline with the specified configuration file.
+Run the testing pipeline with the specified configuration file.
 
 OPTIONS:
     -h, --help      Show this help message and exit
@@ -16,9 +16,9 @@ ARGUMENTS:
     CONFIG_FILE     Path to YAML configuration file
 
 EXAMPLES:
-    ./train_models.sh config.yaml            
-    ./train_models.sh config.yaml --quiet    # Run quietly
-    ./train_models.sh --quiet config.yaml    # Arguments in any order
+    ./test_models.sh config.yaml            
+    ./test_models.sh config.yaml --quiet    # Run quietly
+    ./test_models.sh --quiet config.yaml    # Arguments in any order
 
 EOF
 }
@@ -42,7 +42,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             echo "Unknown argument: $1"
-            echo "Usage: ./train_models.sh [config.yml] [--quiet]"
+            echo "Usage: ./test_models.sh [config.yml] [--quiet]"
             exit 1
             ;;
     esac
@@ -53,5 +53,5 @@ if [ ! -f "$CONFIG" ]; then
     exit 1
 fi
 
-echo "Running training pipeline with config: $CONFIG"
+echo "Running testing pipeline with config: $CONFIG"
 python src/main.py --config "$CONFIG" $QUIET
