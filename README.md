@@ -29,6 +29,6 @@ bash scripts/final_model.sh config/dos_final.yml
 ```
 
 ### Binary Classifier: Denial of Service Attacks
-We explore classification of denial of service attacks in a [Jupyter notebook](`notebooks/dos_denial_of_service.ipynb`). Based on our exploration, we have developed `dos_train.yml`, `dos_test.yml`, and `dos_final.yml` to build a binary classifier for denial of service attacks (see above). We compared performance of logistic regression, random forests, and gradient boosting (XGBoost). The final XGBoost model is available [here](models/dos_binary.skops).
+We explore classification of denial of service attacks in a [Jupyter notebook](notebooks/dos_denial_of_service.ipynb). Based on our exploration, we have developed `dos_train.yml`, `dos_test.yml`, and `dos_final.yml` to build a binary classifier for denial of service attacks (see above). We compared performance of logistic regression, random forests, and gradient boosting (XGBoost). The final XGBoost model is available [here](models/dos_binary.skops).
 
 ### Multi-class Classifier: All Attacks
