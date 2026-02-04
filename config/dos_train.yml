@@ -1,8 +1,8 @@
 # --- Metadata ----------------------------------------------------------------
 metadata:
-  name: Training for Denial of Service Attacks
+  name: Denial of Service Attacks, Binary, Training
   description: >
-    This is a configuration file for training a binary classifier to
+    This is a configuration file for training binary classifiers to
     classify network flows as benign or denial of service (DoS) attacks
     using the CIC-IDS-2017 benchmark dataset. 
   date_created: 2026-01-27
@@ -111,4 +111,5 @@ pipeline:
     params:
       models_config: models
       model_dir: models/
+      model_file: dos_binary
       cv_n_jobs: 4

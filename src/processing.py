@@ -231,8 +231,9 @@ def clean_data(
     # Remove np.inf and -np.inf
     if rm_inf:
         rows_before_inf = len(df)
-        df.replace([np.inf, -np.inf], np.nan, inplace=True)
-        df.dropna(inplace=True)
+        numeric_cols = df.select_dtypes(include=[np.number]).columns
+        mask = ~(df[numeric_cols].isin([np.inf, -np.inf])).any(axis=1)
+        df = df[mask]
         rows_after_inf = len(df)
         inf_rm = rows_before_inf - rows_after_inf
 
@@ -241,6 +242,7 @@ def clean_data(
             print(
                 f"Removed {inf_rm:,} rows with values <0 ({inf_rm_p:.2f}%)"
             )
+
 
     # Remove negative
     if rm_neg:

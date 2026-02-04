@@ -44,6 +44,8 @@ def train_models(
         Number of cores for cross-validation
     model_dir : str, default None
         Directory to save trained models
+    model_file : str, default None
+        Filename to save trained models
     use_mlflow : bool, default False
         Whether to use MLflow tracking
     mlflow_name : str, optional

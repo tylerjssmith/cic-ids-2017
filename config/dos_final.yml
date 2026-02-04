@@ -1,0 +1,22 @@
+# --- Metadata ----------------------------------------------------------------
+metadata:
+  name: Denial of Service Attacks, Binary, Finalize
+  description: >
+    This is a configuration file to finalize a binary classifier to
+    classify network flows as benign or denial of service (DoS) attacks
+    using the CIC-IDS-2017 benchmark dataset. 
+  date_created: 2026-02-03
+
+
+# -- Pipleine -----------------------------------------------------------------
+pipeline:  
+  - step: Finalize model
+    module: finalize
+    function: finalize_model
+    params:
+      models_file: models/dos_binary.skops
+      data_file: data/processed/data_splits.pkl
+      model_name: xgboost
+      model_dir: models/
+      model_file: dos_binary_xgboost_prod.skops
+      skops_trusted: ['xgboost.core.Booster', 'xgboost.sklearn.XGBClassifier']
