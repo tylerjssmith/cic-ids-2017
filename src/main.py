@@ -38,6 +38,7 @@ def run_pipeline(config_path: str, verbose: bool = True):
             data = func(data, verbose=verbose, **params)
     
     print("Pipeline complete.")
+    print()
 
     return data
 

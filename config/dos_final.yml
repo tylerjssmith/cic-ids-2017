@@ -18,5 +18,5 @@ pipeline:
       data_file: data/processed/data_splits.pkl
       model_name: xgboost
       model_dir: models/
-      model_file: dos_binary_xgboost_prod.skops
+      model_file: dos_binary_xgboost_prod
       skops_trusted: ['xgboost.core.Booster', 'xgboost.sklearn.XGBClassifier']
