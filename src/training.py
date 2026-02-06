@@ -330,8 +330,7 @@ def train_models(
             )
 
             if verbose:
-                print('Cross-validation Scores:')
-                print('Weighted Average:')
+                print('Weighted Average Scores:')
                 print(f'- precision: {precision_weighted:.4f}')
                 print(f'- recall:    {recall_weighted:.4f}')
                 print(f'- f1_score:  {f1_weighted:.4f}')
@@ -361,7 +360,7 @@ def train_models(
             )
             
             if verbose:
-                print('Per Class:')
+                print('Per-Class Scores:')
                 print(scores_df.round(4).to_string(index=False))
                 print()
 

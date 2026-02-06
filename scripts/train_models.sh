@@ -4,11 +4,9 @@ set -e
 
 show_help() {
     cat << EOF
-Usage: ./run_system.sh [OPTIONS] [CONFIG_FILE]
+Usage: ./train_models.sh [OPTIONS] [CONFIG_FILE]
 
-Run system to train, test, or finalize model using a configuration file. The
-file usually will end in _train.yml, _test.yml, or final.yml. Configuration
-files can be used to specify data processing or models.
+Run system to train machine learning models using a configuration file.
 
 OPTIONS:
     -h, --help      Show this help message and exit
@@ -18,9 +16,9 @@ ARGUMENTS:
     CONFIG_FILE     Path to YAML configuration file
 
 EXAMPLES:
-    ./run_system.sh config.yaml            
-    ./run_system.sh config.yaml --quiet    # Run quietly
-    ./run_system.sh --quiet config.yaml    # Arguments in any order
+    ./train_models.sh config.yaml            
+    ./train_models.sh config.yaml --quiet    # Run quietly
+    ./train_models.sh --quiet config.yaml    # Arguments in any order
 
 EOF
 }
@@ -44,7 +42,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             echo "Unknown argument: $1"
-            echo "Usage: ./run_system.sh [config.yml] [--quiet]"
+            echo "Usage: ./train_models.sh [config.yml] [--quiet]"
             exit 1
             ;;
     esac
@@ -55,5 +53,5 @@ if [ ! -f "$CONFIG" ]; then
     exit 1
 fi
 
-echo "Running system with config: $CONFIG"
+echo "Running training pipeline with config: $CONFIG"
 python src/main.py --config "$CONFIG" $QUIET

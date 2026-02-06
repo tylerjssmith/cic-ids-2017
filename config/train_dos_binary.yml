@@ -5,11 +5,7 @@ metadata:
     This is a configuration file for training binary classifiers to
     classify network flows as benign or denial of service (DoS) attacks
     using the CIC-IDS-2017 benchmark dataset. 
-  date_created: 2026-01-27
-
-
-# -- General ------------------------------------------------------------------
-random_state: 76
+  date_created: 2026-02-06
 
 
 # -- Models -------------------------------------------------------------------
@@ -48,29 +44,22 @@ models:
 # -- Pipleine -----------------------------------------------------------------
 pipeline:
   - step: Load raw data
-    module: utilities
+    module: src.io
     function: load_data
     params:
-      filepath: data/raw/Wednesday-workingHours.pcap_ISCX.csv
-      data_type: csv 
-      clean_columns: true
-  
-  - step: Prepare labels
-    module: processing
-    function: prepare_labels
+      directory: data/raw
+      filenames: [Wednesday-workingHours.pcap_ISCX.csv]
+
+  - step: Remove missing and infinity
+    module: src.processing
+    function: clean_data
     params:
-      exclude_values: [Heartbleed]
-      replace_values:
-        0:
-          - BENIGN
-        1:
-          - DoS Hulk
-          - DoS GoldenEye
-          - DoS slowloris
-          - DoS Slowhttptest
+      missing: true
+      infinite: true
+      negative: false
 
   - step: Drop features
-    module: processing
+    module: src.processing
     function: drop_features
     params:
       drop: 
@@ -88,28 +77,60 @@ pipeline:
         - act_data_pkt_fwd
         - min_seg_size_forward
         - down_up_ratio
+      zero_variance: true
 
-  - step: Clean data
-    module: processing
+  - step: Remove negative
+    module: src.processing
     function: clean_data
+    params:
+      missing: false
+      infinite: false
+      negative: true
+
+  - step: Prepare labels
+    module: src.processing
+    function: prepare_labels
+    params:
+      drop_labels: [Heartbleed]
+      replace_labels:
+        BENIGN: benign 
+        DoS Hulk: dos
+        DoS GoldenEye: dos
+        DoS slowloris: dos
+        DoS Slowhttptest: dos
 
   - step: Split data
-    module: processing
+    module: src.training
     function: split_data
     params:
       random_state: 76
 
+  - step: Keep features
+    module: src.processing
+    function: keep_features
+    params:
+      keep:
+        - flow_duration
+        - total_fwd_packets
+        - fwd_packet_length_mean
+        - bwd_packet_length_mean
+        - fwd_packets_s
+        - bwd_packets_s
+        - fwd_iat_mean
+        - bwd_iat_mean
+        - active_mean
+        - idle_mean
+
   - step: Save data splits
-    module: utilities
+    module: src.io
     function: save_data_splits
     params:
-      filepath: 'data/processed/data_splits.pkl'
+      directory: data/processed/dos_binary
+      prefix: dos_binary_sub
 
   - step: Train models
-    module: training
+    module: src.training
     function: train_models
     params:
-      models_config: models
-      model_dir: models/
-      model_file: dos_binary
-      cv_n_jobs: 4
+      models: models
+      filename: dos_binary_results_sub.pkl

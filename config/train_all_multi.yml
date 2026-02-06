@@ -81,6 +81,7 @@ pipeline:
         - act_data_pkt_fwd
         - min_seg_size_forward
         - down_up_ratio
+      zero_variance: true
 
   - step: Remove negative
     module: src.processing
@@ -109,14 +110,15 @@ pipeline:
     module: src.io
     function: save_data_splits
     params:
-      directory: data/processed/
+      directory: data/processed/all_multi
+      prefix: all_multi_all
   
   - step: Train models
     module: src.training
     function: train_models
     params:
       models: models
-      filename: all_attack_types.pkl
+      filename: all_multi_results_all.pkl
       cv_k: 5
       cv_n_jobs: 4
       use_smote: true
