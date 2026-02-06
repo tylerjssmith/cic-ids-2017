@@ -1,175 +1,114 @@
-"""
-Test models in machine learning training pipeline.
-"""
-import skops.io as sio
-import joblib
-from typing import Union
-from pathlib import Path
-from sklearn.metrics import precision_score, recall_score, f1_score, classification_report
+"""Evaluate trained models for networking intrusion detection."""
+import numpy as np
 import pandas as pd
+from sklearn.metrics import precision_recall_fscore_support
 
 
 def evaluate_models(
-    models_file: Union[str, Path],
-    data_file: Union[str, Path],
-    model_names: list = None,
-    skops_trusted: list = ['xgboost.core.Booster', 'xgboost.sklearn.XGBClassifier'],
+    results: dict, 
+    data: dict, 
     verbose: bool = True
 ) -> dict:
     """
-    Evaluate trained models on test data.
+    Evaluate models on test data.
     
     Parameters
     ----------
-    models_file : str
-        Path to skops file containing trained models
-    data_file : str
-        Path to pickle file containing data splits
-    model_names : list
-        Models in models_file to include
-    skops_trusted : list
-        Trusted skops objects
+    results : dict
+        Dictionary returned by train_models() or loaded by 
+        load_results()
+    data : dict
+        Data splits returned by split_data() or loaded by 
+        load_data_splits()
     verbose : bool, default True
-        Print evaluation metrics
-        
+        Print information
+    
     Returns
     -------
     dict
-        Dictionary with evaluation scores for each model
-        Structure: {model_name: {'precision': float, 'recall': float, 'f1': float}}
+        Dictionary mapping model names to evaluation DataFrames
+        Each DataFrame contains precision, recall, F1, and support
+        per class plus overall weighted averages.
     """
     if verbose:
-        print("="*70)
-        print("Evaluate Models")
-        print("-"*70)
-
-    # Load models
-    models_file = Path(models_file)
-    if not models_file.exists():
-        raise FileNotFoundError(f"Models file not found: {models_file}")
-    
-    trained_models = sio.load(models_file, trusted=skops_trusted)
-
-    # Subset models (optional)
-    if model_names is not None:
-        missing = [name for name in model_names if name not in trained_models]
-        if missing:
-            raise ValueError(f"Models not found in file: {missing}")
+        print('='*70)
+        print('Evaluate Models')
+        print('-'*70)
         
-        trained_models = {key: trained_models[key] for key in model_names}
-    
-    # Load data
-    data_file = Path(data_file)
-    if not data_file.exists():
-        raise FileNotFoundError(f"Data file not found: {data_file}")
-    
-    data = joblib.load(data_file)
-
-    # Extract data
-    X_train = data['X_train']
-    X_test = data['X_test']
-    y_train = data['y_train']
-    y_test = data['y_test']
-    
-    if verbose:
-        print(f"Loaded models from: {models_file}")
-        print(f"Loaded data from: {data_file}")
+        print('Models:')
+        for model_name in results.keys():
+            print(f'- {model_name}')
         print()
-    
-    # Evaluate each model
-    results = {}
-    
-    for model_name, model_info in trained_models.items():
-        # Encode test labels
-        label_encoder = model_info.get('label_encoder')
-        if label_encoder is None:
-            raise ValueError(f"Label encoder not found with {model_name}")
-            
-        y_test_encoded = label_encoder.transform(y_test)
-        
-        # Determine if binary or multi-class
-        n_classes = len(label_encoder.classes_)
-        is_binary = n_classes == 2
-        
-        if verbose:       
-            print("-"*70)
-            print(f"Model: {model_name}")
-            print("-"*70)
-        
-        # Predict y
-        pipeline = model_info['pipeline']        
-        y_pred_encoded = pipeline.predict(X_test)
-        
-        # Calculate Scores
-        average = None if is_binary else 'weighted'
-        
-        precision_raw = precision_score(
-            y_test_encoded, 
-            y_pred_encoded, 
-            average=average, 
-            zero_division=0
-        )
-        recall_raw = recall_score(
-            y_test_encoded, 
-            y_pred_encoded, 
-            average=average, 
-            zero_division=0
-        )
-        f1_raw = f1_score(
-            y_test_encoded, 
-            y_pred_encoded, 
-            average=average, 
-            zero_division=0
-        )
-                
-        # Store results
-        if is_binary:
-            precision = precision_raw[1]  # Positive class score
-            recall = recall_raw[1]
-            f1 = f1_raw[1]
+
+    X_test = data['X_test']
+    y_test = data['y_test']
+
+    evaluation = dict()
+
+    for model_name, model_results in results.items():
+        if verbose:
+            print('-'*70)
+            print(model_name)
+            print('-'*70)
+
+        label_encoder = model_results['label_encoder']
+
+        unseen_classes = set(y_test) - set(label_encoder.classes_)
+        if unseen_classes:
+            print(f'Warning: Test set has unseen classes: {unseen_classes}')
+            mask = y_test.isin(label_encoder.classes_)
+            X_test_filtered = X_test[mask]
+            y_test_filtered = y_test[mask]
+            y_test_encoded = label_encoder.transform(y_test_filtered)
         else:
-            precision = precision_raw
-            recall = recall_raw
-            f1 = f1_raw
-    
-        results[model_name] = {
+            X_test_filtered = X_test
+            y_test_encoded = label_encoder.transform(y_test)
+
+        model = model_results['model']
+        y_predict_encoded = model.predict(X_test_filtered)
+
+        precision, recall, f1, support = precision_recall_fscore_support(
+            y_test_encoded,
+            y_predict_encoded,
+            labels=np.unique(y_test_encoded),
+            zero_division=0
+        )
+
+        precision_weighted, recall_weighted, f1_weighted, _ = (
+            precision_recall_fscore_support(
+                y_test_encoded, 
+                y_predict_encoded, 
+                average='weighted', 
+                zero_division=0
+            )
+        )
+
+        class_names = label_encoder.inverse_transform(
+            np.unique(y_test_encoded)
+        )
+
+        scores_df = pd.DataFrame({
+            'class': class_names,
             'precision': precision,
             'recall': recall,
-            'f1': f1
-        }
-        
+            'f1_score': f1,
+            'support': support
+        })
+
+        overall_row = pd.DataFrame({
+            'class': ['overall_weighted'],
+            'precision': [precision_weighted],
+            'recall': [recall_weighted],
+            'f1_score': [f1_weighted],
+            'support': [support.sum()]
+        })
+
+        scores_df = pd.concat([scores_df, overall_row], ignore_index=True)
+
         if verbose:
-            print(f"Precision: {precision:.4f}")
-            print(f"Recall:    {recall:.4f}")
-            print(f"F1-Score:  {f1:.4f}")
+            print(scores_df.round(4).to_string(index=False))
             print()
-            
-            # Decode predictions for classification report
-            y_test_decoded = label_encoder.inverse_transform(y_test_encoded)
-            y_pred_decoded = label_encoder.inverse_transform(y_pred_encoded)
-            
-            print("Classification Report:")
-            print(classification_report(y_test_decoded, y_pred_decoded, 
-                                       target_names=label_encoder.classes_, 
-                                       zero_division=0))
-            print()
-    
-    if verbose:
-        print("-"*70)
-        print("Summary of Results")
-        print("-"*70)
-        
-        summary_data = []
-        for model_name, scores in results.items():
-            summary_data.append({
-                'Model': model_name,
-                'Precision': f"{scores['precision']:.4f}",
-                'Recall': f"{scores['recall']:.4f}",
-                'F1-Score': f"{scores['f1']:.4f}"
-            })
-        
-        summary_df = pd.DataFrame(summary_data)
-        print(summary_df.to_string(index=False))
-        print()
-    
-    return results
+
+        evaluation[model_name] = scores_df
+
+    return evaluation

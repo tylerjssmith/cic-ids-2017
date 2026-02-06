@@ -1,18 +1,14 @@
-# project
+imbalanced_learn
+joblib
 jupyter
-mlflow
-pytest
-
-# ml/data science
 numpy
 pandas
+pyarrow
+pytest
+PyYAML
 scikit-learn
+skops
 xgboost
 
-# data visualization
-matplotlib
-seaborn
 
-# misc
-pyarrow
-skops
+

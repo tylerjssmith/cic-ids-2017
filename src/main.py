@@ -1,5 +1,5 @@
 """
-Run machine learning training pipeline for network intrusion detection.
+Run machine learning pipelines for network intrusion detection.
 """
 import argparse
 import importlib
@@ -14,7 +14,7 @@ def load_function(module_path: str, function_name: str):
 
 def run_pipeline(config_path: str, verbose: bool = True):
     """Load and execute the pipeline functions."""
-    with open(config_path, 'r') as f:
+    with open(config_path, 'r', encoding='utf-8') as f:
         config = yaml.safe_load(f)
     
     data = None
@@ -25,12 +25,10 @@ def run_pipeline(config_path: str, verbose: bool = True):
             step_config['function']
         )
         
-        params = step_config.get('params', {})
+        params = step_config.get('params', {}).copy()
         
-        if step_config['function'] == 'train_models':
-            if 'models_config' in params:
-                models_key = params.pop('models_config')
-                params['models_config'] = config[models_key]
+        if 'models' in params and params['models'] == 'models':
+            params['models'] = config['models']
 
         if data is None:
             data = func(verbose=verbose, **params)
