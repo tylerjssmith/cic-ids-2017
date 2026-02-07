@@ -1,15 +1,16 @@
-import numpy as np
+"""Train final model for network intrusion detection on full dataset."""
+import argparse
 import pandas as pd
 from pathlib import Path
-from sklearn.metrics import precision_recall_fscore_support
 import skops.io as sio
+from input_output import load_data_splits, load_results
 
 def finalize_model(
-    results : dict, 
-    model_name : str, 
-    data : dict, 
-    filename : str, 
-    directory : str | Path = 'models/', 
+    results: dict, 
+    model_name: str, 
+    data: dict, 
+    filename: str, 
+    directory: str | Path = 'models/', 
     verbose: bool = True
 ):
     """
@@ -117,3 +118,65 @@ def finalize_model(
         print()
 
     return final_package
+
+
+def main():
+    """Parse command-line arguments and finalize model."""
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        '--results',
+        type=str,
+        required=True
+    )
+    parser.add_argument(
+        '--model',
+        type=str,
+        required=True
+    )
+    parser.add_argument(
+        '--data',
+        type=str,
+        required=True
+    )
+    parser.add_argument(
+        '--output',
+        type=str,
+        required=True
+    )
+    parser.add_argument(
+        '--quiet',
+        action='store_true'
+    )
+    
+    args = parser.parse_args()
+    
+    results_path = Path(args.results)
+    results_dir = str(results_path.parent)
+    results_filename = results_path.name
+    
+    output_path = Path(args.output)
+    output_dir = (
+        str(output_path.parent) 
+        if output_path.parent != Path('.') 
+        else 'models'
+    )    
+    output_filename = output_path.name
+    
+    results = load_results(results_dir, results_filename)
+    data = load_data_splits(args.data)
+
+    final_model = finalize_model(
+        results=results, 
+        model_name=args.model, 
+        data=data, 
+        directory=output_dir,
+        filename=output_filename,
+        verbose=not args.quiet
+    )
+    
+    return final_model
+
+
+if __name__ == "__main__":
+    final_model = main()

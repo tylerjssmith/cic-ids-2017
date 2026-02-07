@@ -7,4 +7,7 @@ name = 'nids'
 version = '0.1.0'
 
 [tool.setuptools]
-packages = ['src']
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,7 +1,10 @@
 """Evaluate trained models for networking intrusion detection."""
+import argparse
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.metrics import precision_recall_fscore_support
+from input_output import load_data_splits, load_results
 
 
 def evaluate_models(
@@ -112,3 +115,42 @@ def evaluate_models(
         evaluation[model_name] = scores_df
 
     return evaluation
+
+
+def main():
+    """Parse command-line arguments and run evaluation."""
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        '--results',
+        type=str,
+        required=True
+    )
+    parser.add_argument(
+        '--data',
+        type=str,
+        required=True
+    )
+    parser.add_argument(
+        '--quiet',
+        action='store_true'
+    )
+    
+    args = parser.parse_args()
+    
+    # Load data and results
+    results_path = Path(args.results)
+    results_dir = str(results_path.parent)
+    results_filename = results_path.name
+    
+    results = load_results(results_dir, results_filename)
+    data = load_data_splits(args.data)
+    
+    # Evaluate models
+    evaluation = evaluate_models(results, data, verbose=not args.quiet)
+    
+    return evaluation
+
+
+if __name__ == "__main__":
+    evaluation = main()
