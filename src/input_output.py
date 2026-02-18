@@ -136,7 +136,6 @@ def save_data_splits(
 
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
-    prefix = prefix + '_'
 
     if verbose:
         print('Directory:')

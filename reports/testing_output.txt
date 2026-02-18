@@ -1,0 +1,76 @@
+scripts/evaluate_models.sh --results models/results.pkl --data data/processed/
+Running evaluation pipeline with results: models/results.pkl and data: data/processed/
+======================================================================
+Load Results
+----------------------------------------------------------------------
+Directory:
+models
+
+File:
+results.pkl
+
+======================================================================
+Load Data Splits
+----------------------------------------------------------------------
+Directory:
+data/processed
+
+Files:
+X_train
+(2,259,960 rows, 56 columns)
+
+X_test
+(564,991 rows, 56 columns)
+
+y_train
+(2,259,960 rows, 1 columns)
+
+y_test
+(564,991 rows, 1 columns)
+
+y_train, y_test coerced to pd.Series
+
+======================================================================
+Evaluate Models
+----------------------------------------------------------------------
+Models:
+- random_forest
+- xgboost
+
+----------------------------------------------------------------------
+random_forest
+----------------------------------------------------------------------
+           class  precision  recall  f1_score  support
+          benign     0.9994  0.9372    0.9673   453719
+             bot     0.0377  0.9258    0.0724      391
+            ddos     0.9986  0.9992    0.9989    25601
+   dos_goldeneye     0.9904  0.9981    0.9942     2058
+        dos_hulk     0.8905  0.9963    0.9404    45993
+dos_slowhttptest     0.9443  0.9873    0.9653     1100
+   dos_slowloris     0.9983  0.9940    0.9961     1159
+     ftp_patator     0.9473  0.9975    0.9717     1586
+      heartbleed     1.0000  1.0000    1.0000        1
+    infiltration     1.0000  0.5714    0.7273        7
+        portscan     0.9936  0.9997    0.9966    31761
+     ssh_patator     0.0820  0.9847    0.1514     1179
+      web_attack     0.5775  0.9060    0.7054      436
+overall_weighted     0.9870  0.9490    0.9658   564991
+
+----------------------------------------------------------------------
+xgboost
+----------------------------------------------------------------------
+           class  precision  recall  f1_score  support
+          benign     0.9958  0.9904    0.9931   453719
+             bot     0.6260  0.6036    0.6146      391
+            ddos     0.9987  0.9988    0.9988    25601
+   dos_goldeneye     0.9927  0.9961    0.9944     2058
+        dos_hulk     0.9205  0.9769    0.9478    45993
+dos_slowhttptest     0.9411  0.9873    0.9636     1100
+   dos_slowloris     0.9974  0.9931    0.9952     1159
+     ftp_patator     0.9975  0.9880    0.9927     1586
+      heartbleed     1.0000  1.0000    1.0000        1
+    infiltration     1.0000  0.5714    0.7273        7
+        portscan     0.9936  0.9996    0.9966    31761
+     ssh_patator     0.9983  0.5089    0.6742     1179
+      web_attack     0.9802  0.9106    0.9441      436
+overall_weighted     0.9893  0.9889    0.9888   564991

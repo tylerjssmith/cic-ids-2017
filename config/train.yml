@@ -1,0 +1,118 @@
+# --- Metadata ----------------------------------------------------------------
+metadata:
+  name: All Attack Types, Multi-class, Training
+  description: >
+    This is a configuration file for training machine learning models to
+    classify network flows as benign or one of several attack types
+    using the CIC-IDS-2017 benchmark dataset. 
+  date_created: 2026-02-05
+
+
+# --- Models -----------------------------------------------------------
+models: 
+  random_forest:
+    module: sklearn.ensemble
+    class: RandomForestClassifier
+    hyperparameters:
+      n_estimators: 100
+      max_depth: 25
+      min_samples_split: 2
+      min_samples_leaf: 1
+      max_features: 'sqrt'
+      bootstrap: true
+      class_weight: 'balanced'
+      random_state: 76
+      n_jobs: -1
+  xgboost:
+    module: xgboost
+    class: XGBClassifier
+    hyperparameters:
+      objective: 'multi:softprob'
+      num_class: 13
+      max_depth: 6
+      learning_rate: 0.1
+      n_estimators: 100
+      subsample: 0.8
+      colsample_bytree: 0.8
+      min_child_weight: 1
+      gamma: 0
+      reg_alpha: 0
+      reg_lambda: 1
+      random_state: 76
+
+
+# --- Pipeline ---------------------------------------------------------
+pipeline:
+  - step: Load data
+    module: input_output
+    function: load_data
+    params:
+      directory: data/raw/
+
+  - step: Remove missing and infinity
+    module: processing
+    function: clean_data
+    params:
+      missing: true
+      infinite: true
+      negative: false
+
+  - step: Drop features
+    module: processing
+    function: drop_features
+    params:
+      drop:
+        - destination_port
+        - fwd_header_length.1
+        - average_packet_size
+        - avg_fwd_segment_size
+        - avg_bwd_segment_size
+        - subflow_fwd_packets
+        - subflow_fwd_bytes
+        - subflow_bwd_packets
+        - subflow_bwd_bytes
+        - init_win_bytes_forward
+        - init_win_bytes_backward
+        - act_data_pkt_fwd
+        - min_seg_size_forward
+        - down_up_ratio
+      zero_variance: true
+
+  - step: Remove negative
+    module: processing
+    function: clean_data
+    params:
+      missing: false
+      infinite: false
+      negative: true
+
+  - step: Prepare labels
+    module: processing
+    function: prepare_labels
+    params:
+      replace_labels:
+        'Web Attack � Brute Force': 'web_attack'
+        'Web Attack � Sql Injection': 'web_attack'
+        'Web Attack � XSS': 'web_attack'
+
+  - step: Split data
+    module: training
+    function: split_data
+    params:
+      random_state: 76
+  
+  - step: Save data splits
+    module: input_output
+    function: save_data_splits
+    params:
+      directory: data/processed/
+  
+  - step: Train models
+    module: training
+    function: train_models
+    params:
+      models: models
+      filename: results.pkl
+      cv_k: 5
+      cv_n_jobs: 4
+      use_smote: true

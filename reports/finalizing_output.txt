@@ -1,0 +1,44 @@
+scripts/finalize_model.sh --results models/results.pkl --model random_forest --data data/processed --output models/final.skops
+Finalizing 'random_forest' in models/results.pkl, using data in: data/processed
+======================================================================
+Load Results
+----------------------------------------------------------------------
+Directory:
+models
+
+File:
+results.pkl
+
+======================================================================
+Load Data Splits
+----------------------------------------------------------------------
+Directory:
+data/processed
+
+Files:
+X_train
+(2,259,960 rows, 56 columns)
+
+X_test
+(564,991 rows, 56 columns)
+
+y_train
+(2,259,960 rows, 1 columns)
+
+y_test
+(564,991 rows, 1 columns)
+
+y_train, y_test coerced to pd.Series
+
+----------------------------------------------------------------------
+Finalize Model
+----------------------------------------------------------------------
+Model:          random_forest
+Class:          RandomForestClassifier
+Samples:        2,824,951
+Features:       56
+Classes:        13
+Scaling used:   False
+
+Package saved:
+models/final.skops

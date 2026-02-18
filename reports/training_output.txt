@@ -1,0 +1,273 @@
+scripts/train_models.sh config/train.yml
+Running training pipeline with config: config/train.yml
+======================================================================
+Load Data
+----------------------------------------------------------------------
+Directory:
+data/raw
+
+Files:
+Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv
+(225,745 rows, 79 columns)
+
+Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv
+(286,467 rows, 79 columns)
+
+Friday-WorkingHours-Morning.pcap_ISCX.csv
+(191,033 rows, 79 columns)
+
+Monday-WorkingHours.pcap_ISCX.csv
+(529,918 rows, 79 columns)
+
+Thursday-WorkingHours-Afternoon-Infilteration.pcap_ISCX.csv
+(288,602 rows, 79 columns)
+
+Thursday-WorkingHours-Morning-WebAttacks.pcap_ISCX.csv
+(170,366 rows, 79 columns)
+
+Tuesday-WorkingHours.pcap_ISCX.csv
+(445,909 rows, 79 columns)
+
+Wednesday-workingHours.pcap_ISCX.csv
+(692,703 rows, 79 columns)
+
+Cleaned column names.
+
+----------------------------------------------------------------------
+Loaded Rows:    2,830,743
+Loaded Columns: 79
+Memory:         1,922.95 MB
+
+======================================================================
+Clean Data
+----------------------------------------------------------------------
+Dropped 1,358 rows with missing values.
+Dropped 1,509 rows with infinite values.
+
+----------------------------------------------------------------------
+Rows Before: 2,830,743
+Rows After:  2,827,876
+
+======================================================================
+Drop Features
+----------------------------------------------------------------------
+Dropped 14 named columns:
+- destination_port
+- fwd_header_length.1
+- average_packet_size
+- avg_fwd_segment_size
+- avg_bwd_segment_size
+- subflow_fwd_packets
+- subflow_fwd_bytes
+- subflow_bwd_packets
+- subflow_bwd_bytes
+- init_win_bytes_forward
+- init_win_bytes_backward
+- act_data_pkt_fwd
+- min_seg_size_forward
+- down_up_ratio
+
+Dropped 8 columns with zero variance:
+- bwd_psh_flags
+- bwd_urg_flags
+- fwd_avg_bytes_bulk
+- fwd_avg_packets_bulk
+- fwd_avg_bulk_rate
+- bwd_avg_bytes_bulk
+- bwd_avg_packets_bulk
+- bwd_avg_bulk_rate
+
+----------------------------------------------------------------------
+Columns Before: 79
+Columns After:  57
+
+======================================================================
+Clean Data
+----------------------------------------------------------------------
+Dropped 2,925 rows with negative values.
+
+----------------------------------------------------------------------
+Rows Before: 2,827,876
+Rows After:  2,824,951
+
+======================================================================
+Prepare Labels
+----------------------------------------------------------------------
+Replaced label values:
+- Web Attack � Brute Force -> web_attack
+- Web Attack � Sql Injection -> web_attack
+- Web Attack � XSS -> web_attack
+
+Cleaned label values.
+
+----------------------------------------------------------------------
+Label Distribution:
+_raw_label                  label           
+BENIGN                      benign              2268589
+Bot                         bot                    1956
+DDoS                        ddos                 128006
+DoS GoldenEye               dos_goldeneye         10288
+DoS Hulk                    dos_hulk             229965
+DoS Slowhttptest            dos_slowhttptest       5499
+DoS slowloris               dos_slowloris          5796
+FTP-Patator                 ftp_patator            7931
+Heartbleed                  heartbleed                7
+Infiltration                infiltration             35
+PortScan                    portscan             158804
+SSH-Patator                 ssh_patator            5895
+Web Attack � Brute Force    web_attack             1507
+Web Attack � Sql Injection  web_attack               21
+Web Attack � XSS            web_attack              652
+
+----------------------------------------------------------------------
+Rows Before: 2,824,951
+Rows After:  2,824,951
+
+======================================================================
+Split Data
+----------------------------------------------------------------------
+Test Size:    0.2
+Random State: 76
+Stratify:     True
+
+Dataset Sizes:
+Full:     2,824,951 rows
+Training: 2,259,960 rows (80.0%)
+Test:      564,991 rows (20.0%)
+
+Class Balance Comparison:
+----------------------------------------------------------------------
+Class                  Full Dataset     Training Set         Test Set
+----------------------------------------------------------------------
+benign            2,268,589 (80.3%) 1,814,870 (80.3%)  453,719 (80.3%)
+bot                   1,956 ( 0.1%)    1,565 ( 0.1%)      391 ( 0.1%)
+ddos                128,006 ( 4.5%)  102,405 ( 4.5%)   25,601 ( 4.5%)
+dos_goldeneye        10,288 ( 0.4%)    8,230 ( 0.4%)    2,058 ( 0.4%)
+dos_hulk            229,965 ( 8.1%)  183,972 ( 8.1%)   45,993 ( 8.1%)
+dos_slowhttptest      5,499 ( 0.2%)    4,399 ( 0.2%)    1,100 ( 0.2%)
+dos_slowloris         5,796 ( 0.2%)    4,637 ( 0.2%)    1,159 ( 0.2%)
+ftp_patator           7,931 ( 0.3%)    6,345 ( 0.3%)    1,586 ( 0.3%)
+heartbleed                7 ( 0.0%)        6 ( 0.0%)        1 ( 0.0%)
+infiltration             35 ( 0.0%)       28 ( 0.0%)        7 ( 0.0%)
+portscan            158,804 ( 5.6%)  127,043 ( 5.6%)   31,761 ( 5.6%)
+ssh_patator           5,895 ( 0.2%)    4,716 ( 0.2%)    1,179 ( 0.2%)
+web_attack            2,180 ( 0.1%)    1,744 ( 0.1%)      436 ( 0.1%)
+----------------------------------------------------------------------
+Success: Class distribution differences <0.5%
+
+======================================================================
+Save Data Splits
+----------------------------------------------------------------------
+Directory:
+data/processed
+
+Files:
+- X_train.parquet
+- X_test.parquet
+- y_train.parquet
+- y_test.parquet
+
+======================================================================
+Train Models
+----------------------------------------------------------------------
+LabelEncoder():
+- benign             -> 0
+- bot                -> 1
+- ddos               -> 2
+- dos_goldeneye      -> 3
+- dos_hulk           -> 4
+- dos_slowhttptest   -> 5
+- dos_slowloris      -> 6
+- ftp_patator        -> 7
+- heartbleed         -> 8
+- infiltration       -> 9
+- portscan           -> 10
+- ssh_patator        -> 11
+- web_attack         -> 12
+
+----------------------------------------------------------------------
+SMOTE():
+Samples Before: 2,259,960
+Samples After:  2,318,290 (+58,330) (smote_max=10,000)
+
+----------------------------------------------------------------------
+random_forest
+----------------------------------------------------------------------
+Weighted Average Scores:
+- precision: 0.9825
+- recall:    0.9505
+- f1_score:  0.9631
+
+Per-Class Scores:
+           class  precision  recall  f1_score  support
+          benign     0.9993  0.9378    0.9676  1814870
+             bot     0.2144  0.9892    0.3525    10000
+            ddos     0.9986  0.9990    0.9988   102405
+   dos_goldeneye     0.9953  0.9931    0.9942    10000
+        dos_hulk     0.8895  0.9959    0.9397   183972
+dos_slowhttptest     0.9765  0.9933    0.9848    10000
+   dos_slowloris     0.9913  0.9942    0.9928    10000
+     ftp_patator     0.9767  0.9977    0.9871    10000
+      heartbleed     1.0000  1.0000    1.0000    10000
+    infiltration     0.9998  0.9995    0.9996    10000
+        portscan     0.9939  0.9996    0.9968   127043
+     ssh_patator     0.1605  0.9903    0.2763    10000
+      web_attack     0.8801  0.9446    0.9112    10000
+overall_weighted     0.9825  0.9505    0.9631  2318290
+
+Feature Importances (tree-based):
+                    feature  importance
+         packet_length_mean      0.0457
+     bwd_packet_length_mean      0.0421
+total_length_of_fwd_packets      0.0406
+      bwd_packet_length_max      0.0395
+     fwd_packet_length_mean      0.0388
+      fwd_packet_length_max      0.0383
+              bwd_packets_s      0.0368
+          max_packet_length      0.0334
+total_length_of_bwd_packets      0.0308
+          bwd_header_length      0.0297
+
+----------------------------------------------------------------------
+xgboost
+----------------------------------------------------------------------
+Weighted Average Scores:
+- precision: 0.9864
+- recall:    0.9862
+- f1_score:  0.9858
+
+Per-Class Scores:
+           class  precision  recall  f1_score  support
+          benign     0.9921  0.9903    0.9912  1814870
+             bot     0.9056  0.6265    0.7406    10000
+            ddos     0.9988  0.9987    0.9987   102405
+   dos_goldeneye     0.9931  0.9937    0.9934    10000
+        dos_hulk     0.9191  0.9768    0.9471   183972
+dos_slowhttptest     0.9762  0.9913    0.9837    10000
+   dos_slowloris     0.9961  0.9930    0.9945    10000
+     ftp_patator     0.9978  0.9840    0.9908    10000
+      heartbleed     0.9999  1.0000    1.0000    10000
+    infiltration     0.9998  0.9996    0.9997    10000
+        portscan     0.9939  0.9996    0.9968   127043
+     ssh_patator     0.9996  0.5114    0.6766    10000
+      web_attack     0.9981  0.9043    0.9489    10000
+overall_weighted     0.9864  0.9862    0.9858  2318290
+
+Feature Importances (tree-based):
+                    feature  importance
+                fwd_iat_std      0.1141
+      bwd_packet_length_std      0.0853
+             psh_flag_count      0.0681
+     bwd_packet_length_mean      0.0606
+              bwd_packets_s      0.0575
+total_length_of_fwd_packets      0.0452
+          packet_length_std      0.0419
+      bwd_packet_length_min      0.0374
+     total_backward_packets      0.0316
+               flow_bytes_s      0.0298
+
+----------------------------------------------------------------------
+Results saved:
+models/results.pkl
+
+Pipeline complete.
