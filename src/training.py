@@ -145,7 +145,7 @@ def train_models(
     filename: str = None,
     directory: str | Path = 'models/',
     cv_k: int = 10, 
-    cv_n_jobs: int = -1, 
+    cv_n_jobs: int = 1, 
     use_smote: bool = False,
     smote_max: int = 10000,
     random_state: int = 76,
@@ -178,7 +178,7 @@ def train_models(
         Directory to save results
     cv_k : int, default 10
         Number of folds
-    cv_n_jobs : int, default -1
+    cv_n_jobs : int, default 1
         Number of parallel jobs by cross_val_predict()
     use_smote : bool, default False
         Whether to apply SMOTE for class imbalance

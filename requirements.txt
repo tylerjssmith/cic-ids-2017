@@ -9,6 +9,3 @@ PyYAML
 scikit-learn
 skops
 xgboost
-
-shap
-
