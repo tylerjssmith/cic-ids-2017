@@ -272,6 +272,7 @@ def prepare_labels(
     
     df['_raw_label'] = df[raw_col]
     df[processed_col] = df['_raw_label']
+    df = df.drop(columns=[raw_col])
 
     if drop_labels:
         n_before_drop = len(df)
