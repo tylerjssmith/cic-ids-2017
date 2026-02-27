@@ -7,5 +7,6 @@ pyarrow
 pytest
 PyYAML
 scikit-learn
+shap
 skops
 xgboost

@@ -1,5 +1,5 @@
-scripts/finalize_model.sh --results models/results.pkl --model random_forest --data data/processed --output models/final.skops
-Finalizing 'random_forest' in models/results.pkl, using data in: data/processed
+scripts/finalize_model.sh --results models/results.pkl --model random_forest --data data/processed/ --output results/final.skops
+Finalizing 'random_forest' in models/results.pkl, using data in: data/processed/
 ======================================================================
 Load Results
 ----------------------------------------------------------------------
@@ -41,4 +41,4 @@ Classes:        13
 Scaling used:   False
 
 Package saved:
-models/final.skops
+results/final.skops

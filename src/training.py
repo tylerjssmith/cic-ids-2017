@@ -1,4 +1,5 @@
 """Train models for network intrusion detection."""
+import copy
 import importlib
 import joblib
 from collections import Counter
@@ -10,6 +11,8 @@ from sklearn.metrics import precision_recall_fscore_support
 from sklearn.model_selection import cross_val_predict, train_test_split
 from sklearn.preprocessing import LabelEncoder
 from imblearn.over_sampling import SMOTE
+from imblearn.pipeline import Pipeline as ImbPipeline
+
 
 def split_data(
     df: pd.DataFrame, 
@@ -147,7 +150,7 @@ def train_models(
     cv_k: int = 10, 
     cv_n_jobs: int = 1, 
     use_smote: bool = False,
-    smote_max: int = 10000,
+    smote_max: int = 2500,
     random_state: int = 76,
     verbose: bool = True,
     cv_kwargs: dict = None,
@@ -158,11 +161,11 @@ def train_models(
     Parameters
     ----------
     data : dict
-        Training data
-        data should contain 'X_train' and 'y_train'.
+        Training data.
+        Must contain 'X_train' and 'y_train'.
         X_train should be a DataFrame with column names.
     models : dict
-        Models configuration
+        Models configuration.
         Expected format:
         {
             'model_name': {
@@ -173,39 +176,48 @@ def train_models(
             }
         }
     filename : str, default None
-        Filename to save results
+        Filename to save results.
     directory : str | Path, default 'models/'
-        Directory to save results
+        Directory to save results.
     cv_k : int, default 10
-        Number of folds
+        Number of folds.
     cv_n_jobs : int, default 1
-        Number of parallel jobs by cross_val_predict()
+        Number of parallel jobs for cross_val_predict().
     use_smote : bool, default False
-        Whether to apply SMOTE for class imbalance
-    smote_max : int, default 10000
-        Max number of samples to generate for small classes
+        Whether to apply SMOTE for class imbalance. SMOTE is applied inside
+        each CV fold via an imblearn Pipeline to prevent data leakage and
+        applied to the full training set before fitting the final model.
+    smote_max : int, default 2500
+        Maximum number of samples per minority class after oversampling.
     random_state : int, default 76
-        Random state
+        Random state passed to SMOTE. Note: pass random_state inside
+        'hyperparameters' to control randomness within each model.
     verbose : bool, default True
-        Print information
+        Print information.
     cv_kwargs : dict, default None
-        Keyword arguments passed to cross_val_predict()
+        Additional keyword arguments passed to cross_val_predict().
+        Note: 'cv' is reserved and will be ignored if passed here.
 
     Returns
     -------
     dict[str, dict[str, Any]]
         Dictionary mapping model names to results:
-        - 'model': Trained model on full training data
-        - 'scaler': StandardScaler (if scale_features=True in model_config)
-        - 'label_encoder': LabelEncoder fitted on target labels
-        - 'metrics': DataFrame with precision, recall, F1 per class, overall
-        - 'feature_importances': DataFrame with feature names and importances
-        - 'precision_mean': Mean precision (weighted) from CV
-        - 'precision_std': Std deviation per class
-        - 'recall_mean': Mean recall (weighted) from CV
-        - 'recall_std': Std deviation per class
-        - 'f1_mean': Mean F1 score (weighted) from CV
-        - 'f1_std': Std deviation per class
+        - 'model': Trained model (or pipeline) on full training data.
+        - 'scaler': StandardScaler fitted on training data, or None.
+          Apply scaler.transform() to X_test before calling model.predict().
+        - 'label_encoder': LabelEncoder fitted on target labels.
+          Use label_encoder.inverse_transform() to recover class names.
+        - 'metrics': DataFrame with precision, recall, F1 per class and
+          overall weighted average. CV metrics reflect fold-level performance
+          on held-out folds only.
+        - 'feature_importances': DataFrame of feature names and importances,
+          or None if the model does not expose them.
+        - 'precision_mean': Weighted-average precision across classes (CV).
+        - 'precision_std': Std deviation of per-class precision across classes.
+        - 'recall_mean': Weighted-average recall across classes (CV).
+        - 'recall_std': Std deviation of per-class recall across classes.
+        - 'f1_mean': Weighted-average F1 score across classes (CV).
+        - 'f1_std': Std deviation of per-class F1 across classes.
     """
     if verbose:
         print('='*70)
@@ -219,8 +231,9 @@ def train_models(
 
     if cv_kwargs is None:
         cv_kwargs = {}
+    cv_kwargs = {k: v for k, v in cv_kwargs.items() if k != 'cv'}
 
-    # LabelEncoder()
+    # Encode Labels
     label_encoder = LabelEncoder()
     y_encoded = label_encoder.fit_transform(y)
 
@@ -230,39 +243,54 @@ def train_models(
             print(f'- {label:<18} -> {code}')
         print()
 
-    # SMOTE()
+    # Build SMOTE sampling_strategy
+    smote_sampling_dict = {}
     if use_smote:
-        class_counts = Counter(y_encoded)
-        sampling_dict = {}
-        for class_label, count in class_counts.items():
-            if count < smote_max:
-                sampling_dict[class_label] = smote_max
+        if verbose:
+            print('SMOTE():')
 
-        smote = SMOTE(
-            sampling_strategy=sampling_dict, 
-            random_state=random_state
+        class_counts = Counter(y_encoded)
+
+        min_count = min(
+            count for count in class_counts.values() if count < smote_max
         )
-        X_resampled, y_resampled = smote.fit_resample(X, y_encoded)
-        X_resampled = pd.DataFrame(X_resampled, columns=feature_names)
+        min_count_in_fold = int(min_count * (cv_k - 1) / cv_k)
+        k_neighbors = min(5, min_count_in_fold - 1)
+
+        if k_neighbors < 1:
+            raise ValueError(
+                f'Smallest minority class has too few samples ({min_count}) '
+                f'to use SMOTE with cv_k={cv_k}. Reduce cv_k or disable SMOTE.'
+            )
 
         if verbose:
-            n_y_pre = len(y_encoded)
-            n_y_pst = len(y_resampled)
-            n_y_dif = n_y_pst - n_y_pre
-            print('-'*70)
-            print('SMOTE():')
-            print(f'Samples Before: {n_y_pre:,}')
-            print(f'Samples After:  {n_y_pst:,} (+{n_y_dif:,}) '
-                  f'(smote_max={smote_max:,})')
+            max_name_len = max(
+                len(label_encoder.inverse_transform([label])[0])
+                for label in class_counts
+            )
+            max_count_len = max(
+                len(f'{count:,}') 
+                for count in class_counts.values()
+            )
+            if k_neighbors < 5:
+                print(f'k_neighbors reduced to {k_neighbors} '
+                      f'(min class count = {min_count})')
+
+        for label, count in class_counts.items():
+            if count < smote_max:
+                smote_sampling_dict[label] = smote_max
+
+                if verbose:
+                    class_name = label_encoder.inverse_transform([label])[0]
+                    print(f'- {class_name:<{max_name_len}} '
+                        f'{count:>{max_count_len},} -> {smote_max:,}')
+
+        if verbose:
             print()
 
-    else:
-        X_resampled, y_resampled = X, y_encoded
-    
-    # Models
+    # Train Models
     results = dict()
 
-    # For each model in models...
     for model_name, model_config in models.items():
         if verbose:
             print('-'*70)
@@ -292,53 +320,65 @@ def train_models(
             print(f'Error initializing {model_name} with hyperparameters: {e}')
             continue
 
-        # Apply StandardScaler (if scale_features=True in model_config)
+        # Apply StandardScaler
         scaler = None
         if scale_features:
             from sklearn.preprocessing import StandardScaler
             scaler = StandardScaler()
-            X_scaled = scaler.fit_transform(X_resampled)
+            X_scaled = scaler.fit_transform(X)
             X_scaled = pd.DataFrame(X_scaled, columns=feature_names)
             if verbose:
                 print('StandardScaler applied')
                 print()
         else:
-            X_scaled = X_resampled
+            X_scaled = X
 
         # Run Cross-validation
         try:
+            if use_smote:
+                smote = SMOTE(
+                    sampling_strategy=smote_sampling_dict,
+                    k_neighbors=k_neighbors,
+                    random_state=random_state
+                )
+                cv_estimator = ImbPipeline([
+                    ('smote', smote),
+                    ('model', model)
+                ])
+            else:
+                cv_estimator = model
+
             y_pred = cross_val_predict(
-                model, X_scaled, y_resampled,
+                cv_estimator, X_scaled, y_encoded,
                 cv=cv_k,
-                n_jobs=cv_n_jobs, 
+                n_jobs=cv_n_jobs,
                 **cv_kwargs
             )
 
-            # Calculate Scores
+            # Calculate Cross-validation Scores
             precision, recall, f1, support = precision_recall_fscore_support(
-                y_resampled, y_pred, 
-                labels=np.unique(y_resampled), 
+                y_encoded, y_pred,
+                labels=np.unique(y_encoded),
                 zero_division=0
             )
 
             precision_weighted, recall_weighted, f1_weighted, _ = (
                 precision_recall_fscore_support(
-                    y_resampled, y_pred, 
-                    average='weighted', 
+                    y_encoded, y_pred,
+                    average='weighted',
                     zero_division=0
                 )
             )
 
             if verbose:
-                print('Weighted Average Scores:')
+                print('Weighted Average Scores (CV):')
                 print(f'- precision: {precision_weighted:.4f}')
                 print(f'- recall:    {recall_weighted:.4f}')
                 print(f'- f1_score:  {f1_weighted:.4f}')
                 print()
 
-            # Store Results
             class_names = label_encoder.inverse_transform(
-                np.unique(y_resampled)
+                np.unique(y_encoded)
             )
             scores_df = pd.DataFrame({
                 'class': class_names,
@@ -347,7 +387,6 @@ def train_models(
                 'f1_score': f1,
                 'support': support
             })
-            
             overall_row = pd.DataFrame({
                 'class': ['overall_weighted'],
                 'precision': [precision_weighted],
@@ -355,17 +394,15 @@ def train_models(
                 'f1_score': [f1_weighted],
                 'support': [support.sum()]
             })
-            scores_df = pd.concat([scores_df, overall_row], 
-                ignore_index=True
-            )
-            
+            scores_df = pd.concat([scores_df, overall_row], ignore_index=True)
+
             if verbose:
                 print('Per-Class Scores:')
                 print(scores_df.round(4).to_string(index=False))
                 print()
 
             result_dict = {
-                'label_encoder': label_encoder,
+                'label_encoder': copy.deepcopy(label_encoder),
                 'scaler': scaler,
                 'metrics': scores_df,
                 'precision_mean': precision_weighted,
@@ -376,21 +413,40 @@ def train_models(
                 'f1_std': f1.std()
             }
 
-            # Train Model w/ Full Data
-            model.fit(X_scaled, y_resampled)
+            # Train Final Model
+            if use_smote:
+                smote_final = SMOTE(
+                    sampling_strategy=smote_sampling_dict,
+                    k_neighbors=k_neighbors,
+                    random_state=random_state
+                )
+                X_final, y_final = smote_final.fit_resample(X_scaled, y_encoded)
+                X_final = pd.DataFrame(X_final, columns=feature_names)
+
+                if verbose:
+                    n_before = len(y_encoded)
+                    n_after = len(y_final)
+                    print(f'SMOTE() applied for final fit:')
+                    print(f'  Samples before: {n_before:,}')
+                    print(f'  Samples after:  {n_after:,} '
+                          f'(+{n_after - n_before:,})')
+                    print()
+            else:
+                X_final, y_final = X_scaled, y_encoded
+
+            model.fit(X_final, y_final)
             result_dict['model'] = model
-            
+
             # Extract Feature Importances
             feature_importances_df = None
-            
+
             if hasattr(model, 'feature_importances_'):
                 importances = model.feature_importances_
                 feature_importances_df = pd.DataFrame({
                     'feature': feature_names,
                     'importance': importances
-                }).sort_values('importance', 
-                    ascending=False, ignore_index=True)
-                
+                }).sort_values('importance', ascending=False, ignore_index=True)
+
                 if verbose:
                     print('Feature Importances (tree-based):')
                     print(
@@ -400,20 +456,19 @@ def train_models(
                             .to_string(index=False)
                     )
                     print()
-            
+
             elif hasattr(model, 'coef_'):
                 coef = model.coef_
                 if coef.ndim > 1:
                     importances = np.abs(coef).mean(axis=0)
                 else:
                     importances = np.abs(coef)
-                
+
                 feature_importances_df = pd.DataFrame({
                     'feature': feature_names,
                     'importance': importances
-                }).sort_values('importance', 
-                    ascending=False, ignore_index=True)
-                
+                }).sort_values('importance', ascending=False, ignore_index=True)
+
                 if verbose:
                     print('Feature Importances (coefficient-based):')
                     print(
@@ -423,14 +478,13 @@ def train_models(
                             .to_string(index=False)
                     )
                     print()
-            
+
             else:
                 if verbose:
                     print('Feature importances are not available.')
                     print()
-            
+
             result_dict['feature_importances'] = feature_importances_df
-            
             results[model_name] = result_dict
 
         except Exception as e:

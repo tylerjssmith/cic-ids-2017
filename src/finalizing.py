@@ -46,7 +46,7 @@ def finalize_model(
         - metadata
     """
     if verbose:
-        print('-'*70)
+        print('='*70)
         print('Finalize Model')
         print('-'*70)
 

@@ -185,86 +185,96 @@ LabelEncoder():
 - ssh_patator        -> 11
 - web_attack         -> 12
 
-----------------------------------------------------------------------
 SMOTE():
-Samples Before: 2,259,960
-Samples After:  2,318,290 (+58,330) (smote_max=10,000)
+  k_neighbors reduced to 3 (min class count = 6)
+- web_attack           1,744 -> 2,500
+- bot                  1,565 -> 2,500
+- heartbleed               6 -> 2,500
+- infiltration            28 -> 2,500
 
 ----------------------------------------------------------------------
 random_forest
 ----------------------------------------------------------------------
-Weighted Average Scores:
-- precision: 0.9825
-- recall:    0.9505
-- f1_score:  0.9631
+Weighted Average Scores (CV):
+- precision: 0.9868
+- recall:    0.9490
+- f1_score:  0.9657
 
 Per-Class Scores:
            class  precision  recall  f1_score  support
-          benign     0.9993  0.9378    0.9676  1814870
-             bot     0.2144  0.9892    0.3525    10000
-            ddos     0.9986  0.9990    0.9988   102405
-   dos_goldeneye     0.9953  0.9931    0.9942    10000
+          benign     0.9993  0.9373    0.9673  1814870
+             bot     0.0387  0.9514    0.0744     1565
+            ddos     0.9987  0.9989    0.9988   102405
+   dos_goldeneye     0.9955  0.9927    0.9941     8230
         dos_hulk     0.8895  0.9959    0.9397   183972
-dos_slowhttptest     0.9765  0.9933    0.9848    10000
-   dos_slowloris     0.9913  0.9942    0.9928    10000
-     ftp_patator     0.9767  0.9977    0.9871    10000
-      heartbleed     1.0000  1.0000    1.0000    10000
-    infiltration     0.9998  0.9995    0.9996    10000
-        portscan     0.9939  0.9996    0.9968   127043
-     ssh_patator     0.1605  0.9903    0.2763    10000
-      web_attack     0.8801  0.9446    0.9112    10000
-overall_weighted     0.9825  0.9505    0.9631  2318290
+dos_slowhttptest     0.9478  0.9911    0.9690     4399
+   dos_slowloris     0.9836  0.9931    0.9883     4637
+     ftp_patator     0.9642  0.9976    0.9806     6345
+      heartbleed     1.0000  0.8333    0.9091        6
+    infiltration     0.9474  0.6429    0.7660       28
+        portscan     0.9939  0.9996    0.9967   127043
+     ssh_patator     0.0834  0.9824    0.1538     4716
+      web_attack     0.4508  0.9031    0.6014     1744
+overall_weighted     0.9868  0.9490    0.9657  2259960
+
+SMOTE() applied for final fit:
+  Samples before: 2,259,960
+  Samples after:  2,266,617 (+6,657)
 
 Feature Importances (tree-based):
                     feature  importance
-         packet_length_mean      0.0457
-     bwd_packet_length_mean      0.0421
-total_length_of_fwd_packets      0.0406
-      bwd_packet_length_max      0.0395
-     fwd_packet_length_mean      0.0388
-      fwd_packet_length_max      0.0383
-              bwd_packets_s      0.0368
-          max_packet_length      0.0334
-total_length_of_bwd_packets      0.0308
-          bwd_header_length      0.0297
+total_length_of_fwd_packets      0.0445
+         packet_length_mean      0.0427
+      fwd_packet_length_max      0.0396
+          max_packet_length      0.0385
+     bwd_packet_length_mean      0.0381
+      bwd_packet_length_max      0.0380
+     fwd_packet_length_mean      0.0346
+              bwd_packets_s      0.0307
+total_length_of_bwd_packets      0.0305
+          packet_length_std      0.0291
 
 ----------------------------------------------------------------------
 xgboost
 ----------------------------------------------------------------------
-Weighted Average Scores:
-- precision: 0.9864
-- recall:    0.9862
-- f1_score:  0.9858
+Weighted Average Scores (CV):
+- precision: 0.9892
+- recall:    0.9888
+- f1_score:  0.9887
 
 Per-Class Scores:
            class  precision  recall  f1_score  support
-          benign     0.9921  0.9903    0.9912  1814870
-             bot     0.9056  0.6265    0.7406    10000
+          benign     0.9957  0.9904    0.9930  1814870
+             bot     0.6957  0.5463    0.6120     1565
             ddos     0.9988  0.9987    0.9987   102405
-   dos_goldeneye     0.9931  0.9937    0.9934    10000
-        dos_hulk     0.9191  0.9768    0.9471   183972
-dos_slowhttptest     0.9762  0.9913    0.9837    10000
-   dos_slowloris     0.9961  0.9930    0.9945    10000
-     ftp_patator     0.9978  0.9840    0.9908    10000
-      heartbleed     0.9999  1.0000    1.0000    10000
-    infiltration     0.9998  0.9996    0.9997    10000
-        portscan     0.9939  0.9996    0.9968   127043
-     ssh_patator     0.9996  0.5114    0.6766    10000
-      web_attack     0.9981  0.9043    0.9489    10000
-overall_weighted     0.9864  0.9862    0.9858  2318290
+   dos_goldeneye     0.9936  0.9927    0.9931     8230
+        dos_hulk     0.9190  0.9769    0.9470   183972
+dos_slowhttptest     0.9481  0.9891    0.9682     4399
+   dos_slowloris     0.9957  0.9925    0.9941     4637
+     ftp_patator     0.9965  0.9838    0.9901     6345
+      heartbleed     0.8333  0.8333    0.8333        6
+    infiltration     0.9524  0.7143    0.8163       28
+        portscan     0.9939  0.9996    0.9967   127043
+     ssh_patator     0.9996  0.5038    0.6700     4716
+      web_attack     0.9918  0.9014    0.9444     1744
+overall_weighted     0.9892  0.9888    0.9887  2259960
+
+SMOTE() applied for final fit:
+  Samples before: 2,259,960
+  Samples after:  2,266,617 (+6,657)
 
 Feature Importances (tree-based):
                     feature  importance
-                fwd_iat_std      0.1141
-      bwd_packet_length_std      0.0853
-             psh_flag_count      0.0681
-     bwd_packet_length_mean      0.0606
-              bwd_packets_s      0.0575
-total_length_of_fwd_packets      0.0452
-          packet_length_std      0.0419
-      bwd_packet_length_min      0.0374
-     total_backward_packets      0.0316
-               flow_bytes_s      0.0298
+                  idle_mean      0.1024
+      bwd_packet_length_std      0.0966
+                fwd_iat_std      0.0778
+              bwd_packets_s      0.0624
+      bwd_packet_length_min      0.0576
+     bwd_packet_length_mean      0.0561
+             psh_flag_count      0.0490
+total_length_of_fwd_packets      0.0468
+               flow_bytes_s      0.0380
+     packet_length_variance      0.0365
 
 ----------------------------------------------------------------------
 Results saved:

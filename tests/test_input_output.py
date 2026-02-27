@@ -64,9 +64,9 @@ def test_clean_names_strips_and_lowercases_columns(csv_dir):
 # --- save_data_splits --------------------------------------------------------
 def test_creates_parquet_files_for_all_splits(tmp_path, splits):
     """A parquet file is written for every key in the data dict."""
-    save_data_splits(splits, tmp_path, prefix='ids', verbose=False)
+    save_data_splits(splits, tmp_path, prefix='', verbose=False)
     for key in splits:
-        assert (tmp_path / f'ids_{key}.parquet').exists()
+        assert (tmp_path / f'{key}.parquet').exists()
 
 
 def test_raises_on_non_dataframe_or_series_value(tmp_path):
@@ -79,13 +79,13 @@ def test_raises_on_non_dataframe_or_series_value(tmp_path):
 # --- load_data_splits --------------------------------------------------------
 def test_returns_correct_keys_and_types(tmp_path, splits):
     """Returned dict has expected keys; y splits are pd.Series."""
-    save_data_splits(splits, tmp_path, prefix='ids', verbose=False)
+    save_data_splits(splits, tmp_path, prefix='', verbose=False)
     loaded = load_data_splits(
         tmp_path,
-        X_train='ids_X_train.parquet',
-        X_test='ids_X_test.parquet',
-        y_train='ids_y_train.parquet',
-        y_test='ids_y_test.parquet',
+        X_train='X_train.parquet',
+        X_test='X_test.parquet',
+        y_train='y_train.parquet',
+        y_test='y_test.parquet',
         verbose=False,
     )
     assert set(loaded.keys()) == {'X_train', 'X_test', 'y_train', 'y_test'}
@@ -95,7 +95,7 @@ def test_returns_correct_keys_and_types(tmp_path, splits):
 
 def test_raises_on_missing_file_data(tmp_path, splits):
     """FileNotFoundError is raised when a required parquet file is absent."""
-    splits['X_train'].to_parquet(tmp_path / 'ids_X_train.parquet')
+    splits['X_train'].to_parquet(tmp_path / 'X_train.parquet')
     with pytest.raises(FileNotFoundError):
         load_data_splits(tmp_path, verbose=False)
 
