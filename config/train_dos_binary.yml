@@ -44,14 +44,14 @@ models:
 # -- Pipleine -----------------------------------------------------------------
 pipeline:
   - step: Load raw data
-    module: src.io
+    module: io
     function: load_data
     params:
       directory: data/raw
       filenames: [Wednesday-workingHours.pcap_ISCX.csv]
 
   - step: Remove missing and infinity
-    module: src.processing
+    module: processing
     function: clean_data
     params:
       missing: true
@@ -59,7 +59,7 @@ pipeline:
       negative: false
 
   - step: Drop features
-    module: src.processing
+    module: processing
     function: drop_features
     params:
       drop: 
@@ -80,7 +80,7 @@ pipeline:
       zero_variance: true
 
   - step: Remove negative
-    module: src.processing
+    module: processing
     function: clean_data
     params:
       missing: false
@@ -88,7 +88,7 @@ pipeline:
       negative: true
 
   - step: Prepare labels
-    module: src.processing
+    module: processing
     function: prepare_labels
     params:
       drop_labels: [Heartbleed]
@@ -100,13 +100,13 @@ pipeline:
         DoS Slowhttptest: dos
 
   - step: Split data
-    module: src.training
+    module: processing
     function: split_data
     params:
       random_state: 76
 
   - step: Keep features
-    module: src.processing
+    module: processing
     function: keep_features
     params:
       keep:
@@ -122,14 +122,14 @@ pipeline:
         - idle_mean
 
   - step: Save data splits
-    module: src.io
+    module: io
     function: save_data_splits
     params:
       directory: data/processed/dos_binary
       prefix: dos_binary_sub
 
   - step: Train models
-    module: src.training
+    module: training
     function: train_models
     params:
       models: models

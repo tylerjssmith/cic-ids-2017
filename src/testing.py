@@ -9,7 +9,7 @@ from input_output import load_data_splits, load_results
 
 def evaluate_models(
     results: dict, 
-    data: dict, 
+    data: dict,
     verbose: bool = True
 ) -> dict:
     """
@@ -68,6 +68,7 @@ def evaluate_models(
             y_test_encoded = label_encoder.transform(y_test)
 
         model = model_results['model']
+
         y_predict_encoded = model.predict(X_test_filtered)
 
         precision, recall, f1, support = precision_recall_fscore_support(

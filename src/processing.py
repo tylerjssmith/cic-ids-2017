@@ -4,6 +4,58 @@ import numpy as np
 import pandas as pd 
 import re
 import warnings
+from sklearn.model_selection import train_test_split
+
+
+def indicate_service(
+    df: pd.DataFrame, 
+    service_port_map: dict[str, list[int]],
+    port_column: str = 'destination_port',
+    verbose: bool = True
+) -> pd.DataFrame:
+    """
+    Indicate service name prior to dropping port numbers.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input DataFrame
+    service_port_map : dict[str, list[int]]
+        Mapping of service names to lists of port numbers
+        Example: {'ssh': [22], 'ftp': [20,21]}
+    port_column : str, default 'destination_port'
+        Name of column with port numbers to drop
+    verbose : bool, default True
+        Print information
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with indicator variables for services instead of
+        destination_port with port numbers.
+    """
+    if verbose:
+        print('='*70)
+        print('Indicate Services')
+        print('-'*70)
+
+    df = df.copy()
+
+    for service, ports in service_port_map.items():
+        service_column = f'is_{service}'
+        df[service_column] = df[port_column].isin(ports).astype(int)
+
+        if verbose:
+            print(f'Ports {ports} -> {service_column}')
+
+    df.drop(columns=port_column, inplace=True)
+
+    if verbose:
+        print()
+        print(f'{port_column} was dropped.')
+        print()
+
+    return df
 
 
 def drop_features(
@@ -337,3 +389,131 @@ def prepare_labels(
         print()
 
     return df
+
+
+def split_data(
+    df: pd.DataFrame, 
+    label_col: str = 'label', 
+    test_size: float = 0.2, 
+    random_state: int = 76, 
+    stratify: bool = True, 
+    verbose: bool = True
+) -> dict:
+    """
+    Split data for training and testing.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input DataFrame
+    label_col : str, default 'label'
+        Label column
+    test_size : float, default 0.2
+        Proportion of data for test set
+    random_state : int, default 76
+        Random state for train_test_split()
+    stratify : bool, default True
+        Whether to stratify on label_col
+    verbose : bool, default True
+        Print information
+
+    Returns
+    -------
+    dict
+        Dictionary containing:
+        - X_train (pd.DataFrame)
+        - X_test (pd.DataFrame)
+        - y_train (pd.Series)
+        - y_test (pd.Series)
+    """
+    if verbose:
+        print('='*70)
+        print('Split Data')
+        print('-'*70)
+    
+    if label_col not in df.columns:
+        raise ValueError(f'Column "{label_col}" not found in df')
+    
+    X = df.drop(columns=[label_col])
+    y = df[label_col]
+
+    if verbose:
+        print(f'Test Size:    {test_size}')
+        print(f'Random State: {random_state}')
+        print(f'Stratify:     {stratify}')
+        print()
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X,
+        y,
+        test_size=test_size,
+        random_state=random_state,
+        stratify=y if stratify else None
+    )
+
+    if verbose:
+        # Dataset Sizes
+        print(f'Dataset Sizes:')
+        print(f'Full:     {len(df):>8,} rows')
+        train_pcts_size = len(X_train) / len(df) * 100
+        print(f'Training: {len(X_train):>8,} rows ({train_pcts_size:.1f}%)')
+        test_pcts_size = len(X_test) / len(df) * 100
+        print(f'Test:     {len(X_test):>8,} rows ({test_pcts_size:.1f}%)')
+        print()
+
+        # Class Balance
+        full_cnts = y.value_counts().sort_index()
+        full_pcts = (full_cnts / len(y) * 100).round(1)
+        
+        train_cnts = y_train.value_counts().sort_index()
+        train_pcts = (train_cnts / len(y_train) * 100).round(1)
+        
+        test_cnts = y_test.value_counts().sort_index()
+        test_pcts = (test_cnts / len(y_test) * 100).round(1)
+
+        max_cls_len = max(len(str(class_val)) for class_val in full_cnts.index)
+        class_col_width = max(max_cls_len, 5)
+        
+        print(f'Class Balance Comparison:')
+        print('-'*70)
+        print(f'{"Class":<{class_col_width}} {"Full Dataset":>18} '
+              f'{"Training Set":>16} {"Test Set":>16}')
+        print('-'*70)
+        
+        for class_val in full_cnts.index:
+            full_str = (
+                f'{full_cnts[class_val]:>6,} ({full_pcts[class_val]:>4.1f}%)'
+                )
+            train_str = (
+                f'{train_cnts[class_val]:>6,} ({train_pcts[class_val]:>4.1f}%)'
+                )
+            test_str = (
+                f'{test_cnts[class_val]:>6,} ({test_pcts[class_val]:>4.1f}%)'
+                )
+            
+            print(f'{str(class_val):<{class_col_width}} {full_str:>18} '
+                  f'{train_str:>16} {test_str:>16}')
+        
+        print('-'*70)
+        
+        # Stratification Check
+        if stratify:
+            max_diff = max(
+                abs(train_pcts - full_pcts).max(),
+                abs(test_pcts - full_pcts).max()
+            )
+            if max_diff < 0.5:
+                print('Success: Class distribution differences <0.5%')
+            else:
+                print(f'Class distribution difference: {max_diff:.2f}%')
+        else:
+            print(f'Stratification disabled (stratify={stratify})')
+        
+        print()
+
+    return {
+        'X_train': X_train,
+        'X_test': X_test,
+        'y_train': y_train,
+        'y_test': y_test
+    }
