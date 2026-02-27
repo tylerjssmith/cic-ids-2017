@@ -18,7 +18,7 @@ Below is the confusion matrix for the test data with rows normalized by column s
 <img src="reports/confusion_matrix.jpg" width='90%' />
 </p>
 
-Note that we have combined three types of web attacks, including SQL injection and XSS, given limited samples. Network flows (Layer 4 data) associated with these attack types are challenging to distinguish from benign flows. These attacks are better detected through application data (Layer 7 data).
+Note that we have combined three types of web attacks, including SQLi and XSS, given limited samples. Network flows (Layer 4 data) associated with these attack types are challenging to distinguish from benign flows. These attacks are better detected through application data (Layer 7 data).
 
 ## Getting Started
 ### Install the Project
