@@ -1,0 +1,12 @@
+imbalanced-learn
+joblib
+jupyter
+numpy
+pandas
+pyarrow
+pytest
+PyYAML
+scikit-learn
+shap
+skops
+xgboost
