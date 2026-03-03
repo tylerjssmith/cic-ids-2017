@@ -12,7 +12,7 @@ We aimed to train a multi-class model with the ability to detect any one of 11 c
 
 We emphasized recall (probability of classifying a flow that is actually an attack as an attack) over precision (probability that a flow classified as an attack is actually an attack) so that more attacks would be detected. The practical tradeoff is that security analysts will spend additional time on false positives. This could be tuned to reduce alert fatigue.
 
-While the model had excellent recall (0.9872) on bot attacks, it had extremely poor precision (0.0325). Bot attacks are disguised to appear benign and may be harder to distinguish with network flows (Layer 4 data) than with application data (Layer 7 data). Below is the confusion matrix with rows normalized by column sums so that the diagonal shows recall by attack type. We see that errors on bot flows typically we misclassifications as benign.
+While the model had excellent recall (0.9872) on bot attacks, it had extremely poor precision (0.0325). Bot attacks are disguised to appear benign and may be harder to distinguish with network flows (Layer 4 data) than with application data (Layer 7 data). Below is the confusion matrix with rows normalized by column sums so that the diagonal shows recall by attack type. We see that, when bot flows were misclassified, they typically were misclassified as benign.
 
 <p align = 'center'>
 <img src="reports/confusion_matrix.jpg" width='90%' />
