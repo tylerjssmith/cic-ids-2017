@@ -1,16 +1,13 @@
 """Train final model for network intrusion detection on full dataset."""
-import argparse
 import pandas as pd
 from pathlib import Path
-import skops.io as sio
-from data_io import load_data_splits, load_results
+from data.input_output import load_data_splits
+from models.input_output import load_results
 
 def finalize_model(
-    results: dict, 
-    model_name: str, 
-    data: dict, 
-    filename: str, 
-    directory: str | Path = 'models/', 
+    results: str | Path, 
+    data: str | Path, 
+    model_name: str,   
     verbose: bool = True
 ):
     """
@@ -18,33 +15,30 @@ def finalize_model(
 
     Parameters
     ----------
-    results : dict
-        Dictionary returned by train_models()
-        The function expects the following keys under model_name:
-        model, label_encoder, scaler (if scaling was used)
+    results : str | Path
+        Path to results pickle to be passed
+        to load_results()
+    data : str | Path
+        Directory containing data splits to be passed 
+        to load_data_splits()
     model_name : str
         Dictionary key for model
-    data : dict
-        Dictionary containing data
-        The function expects the following keys:
-        X_train, X_test, y_train, y_test
-    filename : str
-        File name for saving trained model in directory
-    directory : str | Path, default 'models/'
-        Where to save trained model
     verbose : bool, default True
         Print information
     
     Returns
     -------
     dict
-        Dictionary with:
-        - model: Trained model
-        - label_encoder: Fitted label encoder
-        - scaler: Fitted scaler (or None if scaling was not used)
-        - feature_names: List of feature names
-        - metadata
+        Dictionary containing model artifacts and metadata:
+        - 'model': Trained sklearn model or pipeline
+        - 'label_encoder': Fitted LabelEncoder
+        - 'scaler': Fitted StandardScaler or None
+        - 'feature_names': List of feature names
+        - 'metadata': Dict of metadata (e.g., metrics)
     """
+    data = load_data_splits(data)
+    results = load_results(results)
+
     if verbose:
         print('='*70)
         print('Finalize Model')
@@ -70,6 +64,7 @@ def finalize_model(
 
         if verbose:
             print("StandardScaler refitted on full dataset.")
+            print()
 
     else:
         X_scaled = X
@@ -96,15 +91,6 @@ def finalize_model(
         'metadata': metadata
     }
 
-    directory = Path(directory)
-    directory.mkdir(parents=True, exist_ok=True)
-
-    if not filename.endswith('.skops'):
-        filename = f"{filename}.skops"
-
-    file_path = directory / filename
-    sio.dump(final_package, file_path)
-
     if verbose:
         print(f'Model:          {metadata["model_name"]}')
         print(f'Class:          {metadata["model_class"]}')
@@ -112,9 +98,6 @@ def finalize_model(
         print(f'Features:       {metadata["n_features"]}')
         print(f'Classes:        {metadata["n_classes"]}')
         print(f'Scaling used:   {metadata["scaling_used"]}')
-        print()
-        print('Package saved:')
-        print(file_path)
         print()
 
     return final_package

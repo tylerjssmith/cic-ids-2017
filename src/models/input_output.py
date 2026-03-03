@@ -104,6 +104,11 @@ def save_model(
     verbose : bool, default True
         Print information
     """
+    if verbose:
+        print('='*70)
+        print('Save Model')
+        print('-'*70)
+
     required_keys = {
         'model',
         'label_encoder',
@@ -132,8 +137,12 @@ def save_model(
     hash_path.write_text(file_hash)
     
     if verbose:
-        print(f'Model saved: {file_path}')
-        print(f'SHA256 hash: {file_hash}')
+        print(f'Model saved:')
+        print(f'{file_path}')
+        print()
+        print(f'SHA-256 hash:')
+        print(f'{file_hash}')
+        print()
 
     return file_hash
 

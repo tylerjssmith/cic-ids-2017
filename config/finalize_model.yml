@@ -1,0 +1,24 @@
+# --- Metadata ----------------------------------------------------------------
+metadata:
+  name: Finalize Model
+  description: >
+    This is a configuration file for finalizing a machine learning model for
+    network intrusion detection.
+  date_created: 2026-03-03
+
+
+# --- Pipeline ---------------------------------------------------------
+pipeline:
+  - step: Finalize model
+    module: models.finalize
+    function: finalize_model
+    params:
+      results: models/results_weights.pkl
+      data: data/processed/
+      model_name: random_forest
+  - step: Save final model
+    module: models.input_output
+    function: save_model
+    params:
+      filename: models/final_random_forest_weights.skops
+
