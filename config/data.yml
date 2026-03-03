@@ -1,0 +1,84 @@
+# --- Metadata ----------------------------------------------------------------
+metadata:
+  name: Prepare Data
+  description: >
+    This is a configuration file to prepare data for training models to
+    classify network flows as benign or one of several attack types
+    using the CIC-IDS-2017 benchmark dataset. 
+  date_created: 2026-03-02
+
+# --- Pipeline ---------------------------------------------------------
+pipeline:
+  - step: Load data
+    module: data.input_output
+    function: load_data
+    params:
+      directory: data/raw/
+
+  - step: Drop features by name
+    module: data.build_features
+    function: drop_features
+    params:
+      drop:
+        - fwd_header_length.1
+        - average_packet_size
+        - avg_fwd_segment_size
+        - avg_bwd_segment_size
+        - subflow_fwd_packets
+        - subflow_fwd_bytes
+        - subflow_bwd_packets
+        - subflow_bwd_bytes
+        - init_win_bytes_forward
+        - init_win_bytes_backward
+        - act_data_pkt_fwd
+        - min_seg_size_forward
+        - down_up_ratio
+
+  - step: Remove missing
+    module: data.clean
+    function: remove_missing
+
+  - step: Remove infinite
+    module: data.clean
+    function: remove_infinite
+
+  - step: Remove negative
+    module: data.clean
+    function: remove_negative
+
+  - step: Drop features with zero variance
+    module: data.clean
+    function: drop_zero_variance
+
+  - step: Indicate services
+    module: data.build_features
+    function: indicate_service
+    params:
+      service_port_map:
+        'ftp': [20,21]
+        'http': [80,443]
+        'ssh': [22]
+
+  - step: Prepare labels
+    module: data.label
+    function: prepare_labels
+    params:
+      drop_labels: ['Heartbleed','Infiltration']
+      replace_labels:
+        'Web Attack � Brute Force': 'web_attack'
+        'Web Attack � Sql Injection': 'web_attack'
+        'Web Attack � XSS': 'web_attack'
+
+  - step: Split data
+    module: data.split
+    function: split_data
+    params:
+      test_size: 0.2
+      random_state: 76
+      stratify: true
+
+  - step: Save data splits
+    module: data.input_output
+    function: save_data_splits
+    params:
+      directory: data/processed/

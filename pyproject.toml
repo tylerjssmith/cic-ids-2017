@@ -3,8 +3,8 @@ requires = ['setuptools', 'wheel']
 build-backend = 'setuptools.build_meta'
 
 [project]
-name = 'nids'
-version = '0.1.0'
+name = 'cic-ids-2017'
+version = '0.2.0'
 
 [tool.setuptools]
 package-dir = {"" = "src"}

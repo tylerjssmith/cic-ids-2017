@@ -1,0 +1,25 @@
+# --- Metadata ----------------------------------------------------------------
+metadata:
+  name: Train Models w/ SMOTE for Class Imbalance
+  description: >
+    This is a configuration file for evaluating machine learning models for
+    network intrusion detection. Weights were used during training to address
+    for class imbalance.
+  date_created: 2026-03-02
+
+
+# --- Pipeline ---------------------------------------------------------
+pipeline:
+  - step: Evaluate models on test data
+    module: models.evaluate
+    function: evaluate_models
+    params:
+      results: models/results_weights.pkl
+      data: data/processed/
+
+  - step: Save results
+    module: models.input_output
+    function: save_results
+    params:
+      filename: evaluation_weights.pkl
+      directory: models/
