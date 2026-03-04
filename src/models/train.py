@@ -325,6 +325,12 @@ def _build_smote_strategy(
 
     class_counts = Counter(y_encoded)
 
+    if not any(count < smote_max for count in class_counts.values()):
+        raise ValueError(
+            f'All classes have counts >= smote_max ({smote_max}). '
+            'Increase smote_max or disable SMOTE.'
+        )
+
     min_count = min(
         count for count in class_counts.values() if count < smote_max
     )

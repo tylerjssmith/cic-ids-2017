@@ -1,4 +1,5 @@
 """Train final model for network intrusion detection on full dataset."""
+import datetime
 import pandas as pd
 from pathlib import Path
 from data.input_output import load_data_splits
@@ -49,6 +50,11 @@ def finalize_model(
     y = pd.concat([data['y_train'], data['y_test']], 
         axis=0, ignore_index=True, copy=False)
 
+    if model_name not in results:
+        raise KeyError(
+            f"'{model_name}' not found in results. "
+            f"Available models: {list(results.keys())}"
+        )
     model_results = results[model_name]
     label_encoder = model_results['label_encoder']
     scaler = model_results.get('scaler', None)
@@ -80,7 +86,7 @@ def finalize_model(
         'n_classes': len(label_encoder.classes_),
         'classes': list(label_encoder.classes_),
         'scaling_used': scaler is not None,
-        'training_date': pd.Timestamp.now().isoformat(),
+        'training_date': datetime.datetime.now().isoformat(),
     }
 
     final_package = {

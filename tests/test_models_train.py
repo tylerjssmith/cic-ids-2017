@@ -11,6 +11,13 @@ def sample_data():
     return {'X_train': X, 'y_train': y}
 
 @pytest.fixture
+def sample_data_imbalanced():
+    X = pd.DataFrame({'f1': range(100), 'f2': range(100)})
+    y = pd.Series(['attack'] * 80 + ['benign'] * 20)
+    return {'X_train': X, 'y_train': y}
+
+
+@pytest.fixture
 def sample_models():
     return {
         'decision_tree': {
@@ -89,3 +96,59 @@ def test_train_models_y_pred_proba_shape(sample_data, sample_models):
     n_samples = len(sample_data['X_train'])
     n_classes = sample_data['y_train'].nunique()
     assert result['decision_tree']['y_pred_proba'].shape == (n_samples, n_classes)
+
+
+def test_train_models_smote_happy_path(sample_data_imbalanced, sample_models):
+    result = train_models(
+        sample_data_imbalanced, sample_models,
+        cv_k=2,
+        use_smote=True,
+        smote_max=50,
+        verbose=False,
+    )
+    assert isinstance(result, dict)
+    for model_result in result.values():
+        assert set(model_result.keys()) == {
+            'model', 'scaler', 'label_encoder', 'metrics',
+            'precision_mean', 'precision_std', 'recall_mean',
+            'recall_std', 'f1_mean', 'f1_std', 'y_pred_proba', 'y_encoded'
+        }
+
+
+def test_train_models_smote_raises_when_all_classes_above_smote_max(sample_data, sample_models):
+    with pytest.raises(ValueError, match='smote_max'):
+        train_models(
+            sample_data, sample_models,
+            cv_k=2,
+            use_smote=True,
+            smote_max=50,
+            verbose=False,
+        )
+
+
+def test_train_models_class_weights_happy_path(sample_data, sample_models):
+    result = train_models(
+        sample_data, sample_models,
+        cv_k=2,
+        use_class_weights=True,
+        verbose=False,
+    )
+    assert isinstance(result, dict)
+    assert hasattr(result['decision_tree']['model'], 'predict')
+
+
+def test_train_models_multiple_models(sample_data):
+    two_models = {
+        'decision_tree': {
+            'module': 'sklearn.tree',
+            'class': 'DecisionTreeClassifier',
+            'hyperparameters': {'max_depth': 3}
+        },
+        'decision_tree_2': {
+            'module': 'sklearn.tree',
+            'class': 'DecisionTreeClassifier',
+            'hyperparameters': {'max_depth': 5}
+        },
+    }
+    result = train_models(sample_data, two_models, cv_k=2, verbose=False)
+    assert set(result.keys()) == {'decision_tree', 'decision_tree_2'}
