@@ -19,28 +19,28 @@ def run_pipeline(config_path: str, verbose: bool = True):
     with open(config_path, 'r', encoding='utf-8') as f:
         config = yaml.safe_load(f)
     
-    data = None
+    obj = None
     
-    for step_config in config['pipeline']:
+    for step in config['pipeline']:
         func = load_function(
-            step_config['module'],
-            step_config['function']
+            step['module'],
+            step['function']
         )
         
-        params = step_config.get('params', {}).copy()
+        params = step.get('params', {}).copy()
         
         if 'models' in params and params['models'] == 'models':
             params['models'] = config['models']
 
-        if data is None:
-            data = func(verbose=verbose, **params)
+        if obj is None:
+            obj = func(verbose=verbose, **params)
         else:
-            data = func(data, verbose=verbose, **params)
+            obj = func(obj, verbose=verbose, **params)
     
     print('Pipeline complete')
     print()
 
-    return data
+    return obj
 
 
 if __name__ == '__main__':
@@ -57,4 +57,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     verbose = not args.quiet
-    final_data = run_pipeline(args.config, verbose=verbose)
+    final_obj = run_pipeline(args.config, verbose=verbose)
