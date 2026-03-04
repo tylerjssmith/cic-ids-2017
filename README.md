@@ -70,9 +70,7 @@ python3 src/pipeline.py --config config/evaluate_weights.yml
 ```
 
 ### Finalize Model
-A chosen model from the .pkl file is finalized by retraining it on the full data using [finalize_model()](src/models/finalize.py). The final model is saved as a compressed .skops file for deployment.
-
-`finalize_model()` includes a smoke test to confirm the model will serve predictions and saves a SHA-256 hash file alongside the model to verify model integrity prior to deployment.
+A chosen model from the .pkl file is finalized by retraining it on the full data using [finalize_model()](src/models/finalize.py). The final model is saved as a compressed .skops file for deployment using [save_model()](src/models/input_output.py). `save_model()` includes a smoke test to confirm the model will serve predictions and saves a SHA-256 hash file alongside the model to verify model integrity prior to deployment.
 
 ```bash
 python3 src/pipeline.py --config config/finalize_model.yml
