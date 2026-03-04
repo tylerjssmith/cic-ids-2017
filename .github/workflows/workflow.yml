@@ -2,7 +2,12 @@ name: CIC-IDS-2017 Tests
 
 on:
   push:
-    branches: ["main"]
+    branches:
+      - 'main'
+    paths:
+      - 'requirements.txt'
+      - 'src/**'
+      - 'tests/**'
 
 jobs:
   test:
@@ -10,34 +15,39 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Clone CIC-IDS-2017
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Install Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Install dependencies
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+
+      - name: Install Requirements
         run: |
           python -m pip install --upgrade pip
-          pip install --no-cache-dir pytest pytest-cov
           pip install --no-cache-dir -r requirements.txt
           pip install -e .
 
       - name: Run pytest
         run: |
-          pytest tests/ -v --tb=short --cov=. --cov-report=term-missing
+          pytest tests/ -v --tb=short
 
   dependency-scan:
-    name: Dependency Vulnerability Scan
+    name: Scan Dependencies w/ Trivy
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Clone CIC-IDS-2017
         uses: actions/checkout@v4
 
-      - name: Run Trivy (filesystem scan)
+      - name: Run Trivy
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: "fs"
